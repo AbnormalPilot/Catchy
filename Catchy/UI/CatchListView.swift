@@ -8,36 +8,35 @@ struct CatchListView: View {
     private var included: [EventDraft] { state.includedDrafts }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Found \(state.drafts.count)")
-                .font(.title3.weight(.semibold))
+                .font(.system(size: 15, weight: .semibold))
 
-            VStack(spacing: 2) {
+            VStack(spacing: 0) {
                 ForEach($state.drafts) { $draft in
                     Row(draft: $draft) { state.open(draft) }
                 }
             }
-            .padding(4)
-            .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 10))
+            .padding(2)
+            .background(Color.white.opacity(0.07), in: .rect(cornerRadius: 9))
 
             ForEach(deniedKinds, id: \.self) { kind in
                 AccessDeniedBanner(kind: kind, calendar: calendar)
             }
 
-            ModelNote(state: state)
-
-            HStack {
+            HStack(spacing: 6) {
+                ModelNote(state: state)
+                Spacer(minLength: 0)
                 Button("Discard", action: state.done)
                     .buttonStyle(.island)
                     .keyboardShortcut(.cancelAction)
-                Spacer()
                 Button {
                     state.save()
                 } label: {
                     if state.isSaving {
-                        ProgressView().controlSize(.small)
+                        ProgressView().controlSize(.mini)
                     } else {
-                        Label(saveTitle, systemImage: "plus")
+                        Text(saveTitle)
                     }
                 }
                 .buttonStyle(.islandProminent)
@@ -65,22 +64,24 @@ struct CatchListView: View {
         let open: () -> Void
 
         var body: some View {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Toggle("", isOn: $draft.isIncluded)
                     .toggleStyle(.checkbox)
                     .labelsHidden()
                 Button(action: open) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         Image(systemName: draft.kind == .event ? "calendar" : "checklist")
+                            .font(.system(size: 10.5))
                             .foregroundStyle(.secondary)
-                            .frame(width: 16)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(draft.title.isEmpty ? "Untitled" : draft.title)
-                                .lineLimit(1)
-                            Text(when)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                            .frame(width: 13)
+                        Text(draft.title.isEmpty ? "Untitled" : draft.title)
+                            .font(.system(size: 12, weight: .medium))
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        Text(when)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
                         Spacer(minLength: 0)
                         Image(systemName: "chevron.right")
                             .font(.caption)
@@ -90,8 +91,8 @@ struct CatchListView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 4)
             .opacity(draft.isIncluded ? 1 : 0.5)
         }
 

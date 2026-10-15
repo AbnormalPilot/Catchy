@@ -23,7 +23,7 @@ Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`.
 6. The event appears on the user's iPhone. Success.
 
 ## Screens and Layout
-One surface: a pitch-black island, about 400 pt wide, that grows out of the notch like the Dynamic Island (learner). On a Mac without a notch it grows from the top centre of the screen. A click outside or Esc closes it; the menu bar icon toggles it. Its states:
+One surface: a compact pitch-black island, about 300 pt wide, with its header beside the notch, that grows out of the notch like the Dynamic Island (learner). On a Mac without a notch it grows from the top centre of the screen. Clicking outside or switching apps tucks a waiting card into a compact pill (logo and a count; click to reopen); otherwise it closes. Esc closes it; the menu bar icon toggles it. Its states:
 - **Welcome / idle:** what Catchy does, plus **Capture Screen** and **Catch from Clipboard** buttons, and a **Turn on the ⌥⌘ shortcut** row until Input Monitoring is allowed.
 - **Reading:** a spinner and a snippet of the text being read.
 - **Card:** one event or task. Or a **list** of several, each with a checkbox. *(rec.)*

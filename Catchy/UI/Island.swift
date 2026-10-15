@@ -2,10 +2,18 @@ import AppKit
 import SwiftUI
 
 /// The notch "island": a pitch-black panel that grows out of the notch like the Dynamic Island.
-/// Compact (notch-height, logo + spinner) while reading; expanded into the card otherwise.
 @Observable
 final class IslandModel {
-    var isOpen = false
+    enum Mode {
+        /// Tucked into the notch (window ordered out once the spring settles).
+        case hidden
+        /// Notch-height pill: logo plus activity or a "waiting" badge. Click to expand.
+        case compact
+        /// The full card.
+        case expanded
+    }
+
+    var mode: Mode = .hidden
     /// The physical notch on the screen it's shown on, or a menu-bar-height stand-in without one.
     var notch = CGSize(width: 185, height: 32)
 }
@@ -46,17 +54,22 @@ struct IslandView: View {
     let island: IslandModel
     /// The size the panel needs; the controller fits the window to it.
     let onSize: (CGSize) -> Void
+    let onExpand: () -> Void
 
     @State private var contentSize: CGSize = .zero
 
-    private static let ear: CGFloat = 8
-    private var isCompact: Bool { state.phase == .reading }
+    static let ear: CGFloat = 8
+    /// One interruptible spring for everything, so a quick re-open retargets instead of restarting.
+    static let spring = Animation.spring(response: 0.38, dampingFraction: 0.86)
+
+    private var showsCompact: Bool { island.mode == .compact || state.phase == .reading }
     private var closedSize: CGSize { CGSize(width: island.notch.width + 2 * Self.ear, height: island.notch.height) }
-    private var shapeSize: CGSize { island.isOpen && contentSize != .zero ? contentSize : closedSize }
+    private var shapeSize: CGSize { island.mode == .hidden || contentSize == .zero ? closedSize : contentSize }
+    private var bottomRadius: CGFloat { island.mode == .hidden ? 10 : (showsCompact ? 14 : 22) }
 
     var body: some View {
         ZStack(alignment: .top) {
-            NotchShape(topRadius: Self.ear, bottomRadius: island.isOpen ? (isCompact ? 14 : 26) : 10)
+            NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius)
                 .fill(.black)
                 .frame(width: shapeSize.width, height: shapeSize.height)
 
@@ -66,37 +79,125 @@ struct IslandView: View {
                     contentSize = size
                     onSize(CGSize(width: max(size.width, closedSize.width), height: max(size.height, closedSize.height)))
                 }
-                .opacity(island.isOpen ? 1 : 0)
-                .blur(radius: island.isOpen ? 0 : 8)
-                .scaleEffect(island.isOpen ? 1 : 0.92, anchor: .top)
+                .opacity(island.mode == .hidden ? 0 : 1)
+                .scaleEffect(island.mode == .hidden ? 0.94 : 1, anchor: .top)
         }
         .frame(width: shapeSize.width, height: shapeSize.height, alignment: .top)
-        .clipShape(NotchShape(topRadius: Self.ear, bottomRadius: island.isOpen ? (isCompact ? 14 : 26) : 10))
-        .animation(.spring(response: 0.45, dampingFraction: 0.8), value: island.isOpen)
-        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: contentSize)
+        .clipShape(NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius))
+        .animation(Self.spring, value: island.mode)
+        .animation(Self.spring, value: contentSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.colorScheme, .dark)
+        // Look like system UI even while another app has focus; no flash to grey controls.
+        .environment(\.controlActiveState, .key)
     }
 
     @ViewBuilder
     private var content: some View {
-        if isCompact {
-            // Dynamic Island "compact" look: logo left of the notch, activity right of it.
-            HStack(spacing: 0) {
-                Image(.menuBarIcon)
-                    .foregroundStyle(.white)
-                Spacer(minLength: island.notch.width)
-                ProgressView()
-                    .controlSize(.small)
-                    .tint(.white)
+        if showsCompact {
+            CompactIsland(state: state, notch: island.notch)
+                .contentShape(.rect)
+                .onTapGesture { if state.phase != .reading { onExpand() } }
+        } else {
+            VStack(spacing: 0) {
+                IslandHeader(state: state, notch: island.notch)
+                IslandContent(state: state)
+                    .padding(.top, 6)
+                    .padding(.bottom, 14)
             }
             .padding(.horizontal, 14 + Self.ear)
-            .frame(width: island.notch.width + 2 * Self.ear + 96, height: island.notch.height)
+        }
+    }
+}
+
+/// The strip beside the notch: logo on the left, source and menu on the right.
+private struct IslandHeader: View {
+    @Bindable var state: AppState
+    let notch: CGSize
+    @State private var showsSource = false
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(.menuBarIcon)
+                .resizable()
+                .frame(width: 14, height: 14)
+                .foregroundStyle(.white)
+            Spacer(minLength: notch.width + 12)
+            if state.phase == .review || state.phase == .nothingFound {
+                Button {
+                    showsSource.toggle()
+                } label: {
+                    Image(systemName: state.source.symbol)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Show what Catchy read (\(state.source.rawValue))")
+                .popover(isPresented: $showsSource, arrowEdge: .bottom) {
+                    ScrollView {
+                        Text(state.rawText)
+                            .font(.caption)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                    }
+                    .frame(width: 260, height: 140)
+                }
+            }
+            Menu {
+                Toggle("Pause Catching", isOn: $state.isPaused)
+                Toggle("Launch at Login", isOn: $state.launchesAtLogin)
+                Divider()
+                Button("Quit Catchy") { NSApp.terminate(nil) }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .foregroundStyle(.secondary)
+            .fixedSize()
+        }
+        .font(.system(size: 12, weight: .medium))
+        .frame(height: notch.height)
+    }
+}
+
+/// Dynamic Island "compact" look: logo left of the notch, activity or a waiting badge right of it.
+private struct CompactIsland: View {
+    let state: AppState
+    let notch: CGSize
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Image(.menuBarIcon)
+                .resizable()
+                .frame(width: 14, height: 14)
+                .foregroundStyle(.white)
+            Spacer(minLength: notch.width)
+            trailing
+        }
+        .padding(.horizontal, 12 + IslandView.ear)
+        .frame(height: notch.height)
+    }
+
+    @ViewBuilder
+    private var trailing: some View {
+        if state.phase == .reading {
+            ProgressView()
+                .controlSize(.mini)
+                .tint(.white)
         } else {
-            IslandContent(state: state)
-                .padding(.top, island.notch.height + 8)
-                .padding(.horizontal, 18 + Self.ear)
-                .padding(.bottom, 18)
+            // A card is waiting: what kind, and how many.
+            let count = max(state.drafts.count, 1)
+            HStack(spacing: 3) {
+                Image(systemName: state.drafts.first?.kind == .task ? "checklist" : "calendar")
+                Text("\(count)")
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.black)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(.white, in: .capsule)
         }
     }
 }
@@ -114,6 +215,7 @@ final class IslandPanel: NSPanel {
         isFloatingPanel = true
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
+        animationBehavior = .none
         // Above the menu bar, so it can sit in the notch.
         level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
@@ -134,71 +236,109 @@ final class IslandController {
     private var screen: NSScreen?
     private var size = CGSize(width: 201, height: 32)
     private var outsideClicks: Any?
+    private var appSwitches: Any?
     private var pendingShrink: DispatchWorkItem?
+    private var pendingOrderOut: DispatchWorkItem?
 
-    var isShown: Bool { model.isOpen }
-    /// Called after the island closes (for resetting finished catches).
+    /// Open as the full card (compact counts as closed, so the menu bar icon expands it).
+    var isShown: Bool { model.mode == .expanded }
+    /// Called after the island has fully closed (for resetting finished catches).
     var onClose: () -> Void = {}
 
     init(state: AppState) {
         self.state = state
-        let hosting = NSHostingView(rootView: IslandView(state: state, island: model) { [weak self] size in
-            self?.fit(size)
-        })
+        let hosting = NSHostingView(rootView: IslandView(
+            state: state,
+            island: model,
+            onSize: { [weak self] size in self?.fit(size) },
+            onExpand: { [weak self] in self?.show() }
+        ))
         hosting.sizingOptions = []
         panel.contentView = hosting
         panel.onEscape = { [weak self] in self?.hide() }
-    }
 
-    func show() {
-        pendingShrink?.cancel()
-        let screen = Self.targetScreen()
-        self.screen = screen
-        model.notch = Self.notchSize(on: screen)
-        panel.setFrame(frame(for: size), display: true)
-        panel.orderFrontRegardless()
-        panel.makeKey()
-        model.isOpen = true
-
-        if outsideClicks == nil {
-            outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-                MainActor.assumeIsolated {
-                    // Reading shows the compact island; a stray click shouldn't cancel it.
-                    guard let self, self.state.phase != .reading else { return }
-                    self.hide()
-                }
+        // Switching apps while a card is open tucks it into the notch instead of dropping it.
+        appSwitches = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+            MainActor.assumeIsolated {
+                guard app?.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
+                self?.collapse()
             }
         }
     }
 
-    func hide() {
-        guard model.isOpen else { return }
-        model.isOpen = false
-        if let outsideClicks { NSEvent.removeMonitor(outsideClicks) }
-        outsideClicks = nil
-        // Let it shrink back into the notch before it goes.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
-            guard let self, !self.model.isOpen else { return }
-            self.panel.orderOut(nil)
-            self.onClose()
+    func show() {
+        pendingOrderOut?.cancel()
+        if model.mode == .hidden {
+            screen = Self.targetScreen()
+            model.notch = Self.notchSize(on: screen)
+            panel.setFrame(frame(for: size), display: false)
+        }
+        panel.orderFrontRegardless()
+        panel.makeKey()
+        model.mode = .expanded
+        watchOutsideClicks(true)
+    }
+
+    /// Back into the notch. A card that's still waiting stays as a compact pill.
+    func collapse() {
+        guard model.mode == .expanded else { return }
+        if state.phase == .review {
+            model.mode = .compact
+            watchOutsideClicks(false)
+        } else {
+            hide()
         }
     }
 
+    func hide() {
+        guard model.mode != .hidden else { return }
+        model.mode = .hidden
+        watchOutsideClicks(false)
+        // Let it shrink back into the notch before the window goes.
+        let orderOut = DispatchWorkItem { [weak self] in
+            guard let self, self.model.mode == .hidden else { return }
+            self.panel.orderOut(nil)
+            self.onClose()
+        }
+        pendingOrderOut = orderOut
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: orderOut)
+    }
+
     func toggle() {
-        model.isOpen ? hide() : show()
+        model.mode == .expanded ? collapse() : show()
+    }
+
+    private func watchOutsideClicks(_ on: Bool) {
+        if on, outsideClicks == nil {
+            outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    // Reading shows the compact island; a stray click shouldn't cancel it.
+                    guard let self, self.state.phase != .reading else { return }
+                    self.collapse()
+                }
+            }
+        } else if !on, let monitor = outsideClicks {
+            NSEvent.removeMonitor(monitor)
+            outsideClicks = nil
+        }
     }
 
     /// Grow the window at once; shrink it after the spring settles so the animation isn't clipped.
     private func fit(_ newSize: CGSize) {
         pendingShrink?.cancel()
         let grown = CGSize(width: max(newSize.width, size.width), height: max(newSize.height, size.height))
-        size = grown
-        panel.setFrame(frame(for: grown), display: true)
+        if grown != size {
+            size = grown
+            panel.setFrame(frame(for: grown), display: false)
+        }
         guard grown != newSize else { return }
         let shrink = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.size = newSize
-            self.panel.setFrame(self.frame(for: newSize), display: true)
+            self.panel.setFrame(self.frame(for: newSize), display: false)
         }
         pendingShrink = shrink
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: shrink)
@@ -251,15 +391,15 @@ struct IslandButtonStyle: ButtonStyle {
 
         var body: some View {
             configuration.label
-                .font(.callout.weight(.medium))
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
+                .font(.system(size: 12, weight: .semibold))
+                .padding(.horizontal, 11)
+                .padding(.vertical, 5)
                 .foregroundStyle(prominent ? Color.black : Color.white)
-                .background(prominent ? Color.white : Color.white.opacity(0.12), in: .capsule)
+                .background(prominent ? Color.white : Color.white.opacity(0.13), in: .capsule)
                 .contentShape(.capsule)
                 .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.4)
-                .scaleEffect(configuration.isPressed ? 0.97 : 1)
-                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .scaleEffect(configuration.isPressed ? 0.96 : 1)
+                .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
         }
     }
 }

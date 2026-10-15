@@ -1,44 +1,17 @@
 import SwiftUI
 
-/// What the expanded island shows, under the notch.
+/// What the expanded island shows under the notch strip. Kept tight, like system UI.
 struct IslandContent: View {
     @Bindable var state: AppState
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            header
-            content
-                .transition(.blurReplace)
-        }
-        .frame(width: 360)
-        .animation(.smooth(duration: 0.3), value: state.phase)
-    }
+    static let width: CGFloat = 300
 
-    private var header: some View {
-        HStack(spacing: 8) {
-            Image(.menuBarIcon)
-                .foregroundStyle(.white)
-            Text("Catchy")
-                .font(.headline)
-            Spacer()
-            if state.phase != .idle, state.phase != .needsScreenAccess {
-                Label(state.source.rawValue, systemImage: state.source.symbol)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            Menu {
-                Toggle("Pause Catching", isOn: $state.isPaused)
-                Toggle("Launch at Login", isOn: $state.launchesAtLogin)
-                Divider()
-                Button("Quit Catchy") { NSApp.terminate(nil) }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-        }
+    var body: some View {
+        content
+            .frame(width: Self.width, alignment: .leading)
+            .transition(.opacity)
+            .animation(IslandView.spring, value: state.phase)
+            .font(.system(size: 12))
     }
 
     @ViewBuilder
@@ -47,7 +20,7 @@ struct IslandContent: View {
         case .idle:
             IdleView(state: state)
         case .reading:
-            ReadingView(text: state.rawText)
+            EmptyView()  // shown as the compact island
         case .review:
             if state.showsList {
                 CatchListView(state: state)
@@ -58,7 +31,7 @@ struct IslandContent: View {
             MessageView(
                 symbol: "calendar.badge.exclamationmark",
                 title: "No date found",
-                message: "Catchy couldn't find when this happens.",
+                message: "Catchy couldn't tell when this happens.",
                 primary: ("Create Anyway", state.editManually),
                 secondary: ("Cancel", state.done)
             )
@@ -84,80 +57,56 @@ private struct IdleView: View {
     let state: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             if state.hasSeenWelcome {
                 Text(state.isPaused
-                     ? "Catching is paused. Use the buttons below, or turn it back on in the ••• menu."
-                     : "Copy anything with a date in it, on this Mac or your iPhone, and Catchy turns it into an event.")
-                    .font(.callout)
+                     ? "Paused. Turn catching back on from the ••• menu."
+                     : "Copy anything with a date, here or on your iPhone.")
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             } else {
                 WelcomeView()
             }
 
-            VStack(spacing: 8) {
-                    Button {
-                        state.captureScreen()
-                    } label: {
-                        HStack {
-                            Label("Capture Screen", systemImage: "viewfinder")
-                            Spacer()
-                            if state.shortcutIsActive {
-                                Text("tap ⌥⌘").foregroundStyle(.secondary)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.islandProminent)
-
-                    Button {
-                        state.catchCurrentClipboard()
-                    } label: {
-                        Label("Catch from Clipboard", systemImage: "doc.on.clipboard")
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.island)
+            HStack(spacing: 6) {
+                Button {
+                    state.captureScreen()
+                } label: {
+                    Label(state.shortcutIsActive ? "Capture  ⌥⌘" : "Capture", systemImage: "viewfinder")
+                }
+                .buttonStyle(.islandProminent)
+                Button {
+                    state.catchCurrentClipboard()
+                } label: {
+                    Label("Clipboard", systemImage: "doc.on.clipboard")
+                }
+                .buttonStyle(.island)
+                Spacer(minLength: 0)
             }
 
             if !state.shortcutIsActive {
                 ShortcutSetupRow()
             }
-
-            Label("Runs entirely on this Mac", systemImage: "lock.fill")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
         }
     }
 }
 
 private struct WelcomeView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 7) {
             Text("Welcome to Catchy")
-                .font(.title3.weight(.semibold))
-            Text("Turn dates you see into calendar events, without retyping.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: 8) {
-                step("doc.on.clipboard", "Copy anything with a date", "on this Mac, or on your iPhone")
-                step("viewfinder", "Tap ⌥⌘ and drag", "over a flyer, poster or screenshot")
-                step("contextualmenu.and.cursorarrow", "Or right-click selected text", "Services › Catch with Catchy")
-                step("lock", "Everything stays on this Mac", "read by Apple's on-device model")
-            }
-            .padding(.vertical, 4)
+                .font(.system(size: 14, weight: .semibold))
+            step("doc.on.clipboard", "Copy anything with a date, here or on iPhone")
+            step("command", "Tap ⌥⌘ and drag over a flyer")
+            step("contextualmenu.and.cursorarrow", "Right-click › Services › Catch with Catchy")
+            step("lock", "Read on this Mac by Apple's on-device model")
         }
     }
 
-    private func step(_ symbol: String, _ title: String, _ detail: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: symbol)
-                .foregroundStyle(.tint)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.callout.weight(.medium))
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
+    private func step(_ symbol: String, _ text: String) -> some View {
+        Label {
+            Text(text).foregroundStyle(.secondary)
+        } icon: {
+            Image(systemName: symbol).foregroundStyle(.white)
         }
     }
 }
@@ -165,24 +114,21 @@ private struct WelcomeView: View {
 /// The ⌥⌘ tap needs Input Monitoring, which only the user can grant.
 private struct ShortcutSetupRow: View {
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "command")
-                .foregroundStyle(.secondary)
-                .frame(width: 20)
-            VStack(alignment: .leading, spacing: 6) {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text("Turn on the ⌥⌘ shortcut")
-                    .font(.callout.weight(.medium))
-                Text("Tap Option and Command together to capture the screen. macOS asks for Input Monitoring; Catchy only notices that shortcut, never what you type.")
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium))
+                Text("Needs Input Monitoring. Catchy never sees what you type.")
+                    .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Button("Turn On", action: InputMonitoringPermission.request)
-                    .buttonStyle(.island)
             }
+            Spacer(minLength: 0)
+            Button("Turn On", action: InputMonitoringPermission.request)
+                .buttonStyle(.island)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white.opacity(0.06), in: .rect(cornerRadius: 12))
+        .padding(8)
+        .background(Color.white.opacity(0.07), in: .rect(cornerRadius: 10))
     }
 }
 
@@ -190,49 +136,19 @@ private struct ScreenAccessView: View {
     let state: AppState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Label("Allow Screen Recording", systemImage: "rectangle.dashed.badge.record")
-                .font(.headline)
-            Text("To read text from part of your screen, Catchy needs Screen Recording access. It only looks at the area you select, and the image never leaves this Mac.")
-                .font(.callout)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Allow Screen Recording")
+                .font(.system(size: 14, weight: .semibold))
+            Text("Catchy reads only the area you select, on this Mac. Allow it, then reopen Catchy.")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("1. Click Allow Access, then switch on Catchy.")
-                Text("2. Reopen Catchy so macOS applies the change.")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            HStack {
-                Button("Reopen Catchy", action: ScreenCapturePermission.relaunch)
-                    .buttonStyle(.island)
+            HStack(spacing: 6) {
                 Spacer()
-                Button("Allow Access", action: state.requestScreenAccess)
+                Button("Reopen", action: ScreenCapturePermission.relaunch)
+                    .buttonStyle(.island)
+                Button("Allow", action: state.requestScreenAccess)
                     .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
-            }
-        }
-    }
-}
-
-private struct ReadingView: View {
-    let text: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text(text.isEmpty ? "Reading your screen…" : "Finding the event…")
-                    .font(.callout.weight(.medium))
-            }
-            if !text.isEmpty {
-                Text(text)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .lineLimit(4)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
-                .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 10))
             }
         }
     }
@@ -246,52 +162,46 @@ private struct SavedView: View {
     private var onlyReminders: Bool { saved.eventIDs.isEmpty }
 
     var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 40))
-                .foregroundStyle(.green)
-                .symbolEffect(.bounce, value: appeared)
-            Text(saved.count == 1 ? (saved.titles.first ?? "") : "Added \(saved.count) items")
-                .font(.headline)
-                .multilineTextAlignment(.center)
-            if saved.count == 1, let start = saved.firstStart {
-                Text(saved.firstIsAllDay
-                     ? start.formatted(.dateTime.weekday(.wide).month().day())
-                     : start.formatted(.dateTime.weekday(.wide).month().day().hour().minute()))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            } else {
-                Text(saved.titles.joined(separator: " · "))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.green)
+                    .symbolEffect(.bounce, value: appeared)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(saved.count == 1 ? (saved.titles.first ?? "") : "Added \(saved.count) items")
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            let destination = saved.destinations.joined(separator: " and ")
-            Label(
-                saved.syncsWithICloud ? "Added to \(destination) · syncing to iPhone and Watch" : "Added to \(destination)",
-                systemImage: saved.syncsWithICloud ? "icloud" : "calendar"
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-
-            HStack {
+            HStack(spacing: 6) {
                 Button("Undo") { state.undo(saved) }
                     .buttonStyle(.island)
-                Button(onlyReminders ? "Open Reminders" : "Open Calendar") {
+                Button(onlyReminders ? "Reminders" : "Calendar") {
                     onlyReminders ? state.calendar.openRemindersApp() : state.calendar.openCalendarApp()
                     state.done()
                 }
                 .buttonStyle(.island)
+                Spacer()
                 Button("Done", action: state.done)
                     .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(.top, 4)
         }
-        .frame(maxWidth: .infinity)
         .onAppear { appeared = true }
+    }
+
+    private var subtitle: String {
+        let destination = saved.destinations.joined(separator: ", ")
+        let sync = saved.syncsWithICloud ? " · syncing to iPhone" : ""
+        guard saved.count == 1, let start = saved.firstStart else { return destination + sync }
+        let when = saved.firstIsAllDay
+            ? start.formatted(.dateTime.weekday(.abbreviated).month().day())
+            : start.formatted(.dateTime.weekday(.abbreviated).month().day().hour().minute())
+        return "\(when) · \(destination)\(sync)"
     }
 }
 
@@ -303,14 +213,13 @@ struct MessageView: View {
     let secondary: (String, () -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             Label(title, systemImage: symbol)
-                .font(.headline)
+                .font(.system(size: 13, weight: .semibold))
             Text(message)
-                .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
+            HStack(spacing: 6) {
                 Spacer()
                 if let secondary {
                     Button(secondary.0, action: secondary.1)

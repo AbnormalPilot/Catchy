@@ -1,106 +1,86 @@
 import EventKit
 import SwiftUI
 
-/// The pre-filled, editable card for one event or task.
+/// The pre-filled card for one event or task, in a few dense rows:
+/// title + kind · date and times · place · (notes) · calendar and actions.
 struct EventCardView: View {
     @Bindable var state: AppState
-    @State private var showsSource = false
 
     private var calendar: CalendarService { state.calendar }
     private var kind: CatchKind { state.draft.kind }
     private var fromList: Bool { state.drafts.count > 1 }
+    private var spansDays: Bool {
+        !Calendar.current.isDate(state.draft.start, inSameDayAs: state.draft.end)
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             if fromList {
                 Button {
                     state.backToList()
                 } label: {
-                    Label("All \(state.drafts.count) catches", systemImage: "chevron.left")
+                    Label("All \(state.drafts.count)", systemImage: "chevron.left")
                 }
                 .buttonStyle(.plain)
-                .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
             }
 
-            HStack(alignment: .firstTextBaseline) {
-                TextField(kind == .event ? "Event title" : "Reminder", text: $state.draft.title, axis: .vertical)
-                    .font(.title3.weight(.semibold))
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                TextField(kind == .event ? "Event" : "Reminder", text: $state.draft.title, axis: .vertical)
+                    .font(.system(size: 15, weight: .semibold))
                     .textFieldStyle(.plain)
                     .lineLimit(1...2)
                 kindPicker
             }
 
-            VStack(spacing: 8) {
-                Toggle(kind == .event ? "All-day" : "Any time", isOn: $state.draft.isAllDay.animation())
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                datePicker(kind == .event ? "Starts" : "Due", selection: startBinding)
-                if kind == .event {
-                    datePicker("Ends", selection: $state.draft.end, in: state.draft.start...)
-                }
-                if let zone = state.draft.sourceTimeZone, !state.draft.isAllDay {
-                    Label("\(TimeZones.label(state.draft.start, in: zone)) · shown in your time", systemImage: "globe")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                }
+            whenRow
+
+            if let zone = state.draft.sourceTimeZone, !state.draft.isAllDay {
+                Label("\(TimeZones.label(state.draft.start, in: zone)) in your time", systemImage: "globe")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
             }
 
             if let clash = calendar.clash(for: state.draft) {
                 Label("Clashes with \(clash.title ?? "an event") at \(clash.startDate.formatted(date: .omitted, time: .shortened))",
                       systemImage: "exclamationmark.circle")
-                    .font(.caption)
+                    .font(.system(size: 10.5))
                     .foregroundStyle(.orange)
+                    .lineLimit(1)
             }
 
             if kind == .event {
-                field("mappin.and.ellipse", "Location", text: $state.draft.location)
+                field("mappin", "Add location", text: $state.draft.location)
             }
-            field("text.alignleft", "Notes", text: $state.draft.notes)
-
-            if calendar.access(for: kind) == .granted {
-                destinationPicker
+            if !state.draft.notes.isEmpty {
+                field("text.alignleft", "Notes", text: $state.draft.notes)
             }
 
             if calendar.access(for: kind) == .denied {
                 AccessDeniedBanner(kind: kind, calendar: calendar)
             }
 
-            ModelNote(state: state)
-
-            DisclosureGroup("Original text", isExpanded: $showsSource) {
-                ScrollView {
-                    Text(state.rawText)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            HStack(spacing: 6) {
+                if calendar.access(for: kind) == .granted {
+                    destinationPicker
                 }
-                .frame(maxHeight: 100)
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
-
-            HStack {
+                ModelNote(state: state)
+                Spacer(minLength: 0)
                 if fromList {
-                    Button("Done Editing", action: state.backToList)
+                    Button("Done", action: state.backToList)
                         .buttonStyle(.islandProminent)
                         .keyboardShortcut(.defaultAction)
                 } else {
                     Button("Discard", action: state.done)
                         .buttonStyle(.island)
                         .keyboardShortcut(.cancelAction)
-                    Spacer()
                     Button {
                         state.save()
                     } label: {
                         if state.isSaving {
-                            ProgressView().controlSize(.small)
+                            ProgressView().controlSize(.mini)
                         } else {
-                            Label(kind == .event ? "Add to Calendar" : "Add to Reminders",
-                                  systemImage: kind == .event ? "calendar.badge.plus" : "checklist")
+                            Text("Add")
                         }
                     }
                     .buttonStyle(.islandProminent)
@@ -108,8 +88,39 @@ struct EventCardView: View {
                     .disabled(calendar.access(for: kind) == .denied)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.top, 2)
         }
+    }
+
+    /// One line: date, then start–end (or "All day"), with a tiny all-day switch.
+    private var whenRow: some View {
+        HStack(spacing: 4) {
+            DatePicker("", selection: startBinding, displayedComponents: .date)
+            if !state.draft.isAllDay {
+                DatePicker("", selection: startBinding, displayedComponents: .hourAndMinute)
+                if kind == .event {
+                    Text("–").foregroundStyle(.secondary)
+                    DatePicker("", selection: $state.draft.end, in: state.draft.start...,
+                               displayedComponents: spansDays ? [.date, .hourAndMinute] : .hourAndMinute)
+                }
+            }
+            Spacer(minLength: 0)
+            Button {
+                withAnimation(IslandView.spring) { state.draft.isAllDay.toggle() }
+            } label: {
+                Text(kind == .event ? "All day" : "Any time")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .foregroundStyle(state.draft.isAllDay ? Color.black : Color.secondary)
+                    .background(state.draft.isAllDay ? Color.white : Color.white.opacity(0.1), in: .capsule)
+            }
+            .buttonStyle(.plain)
+        }
+        .labelsHidden()
+        // Plain fields (no stepper arrows): type or use ↑↓ to change.
+        .datePickerStyle(.field)
+        .controlSize(.small)
     }
 
     private var kindPicker: some View {
@@ -119,6 +130,7 @@ struct EventCardView: View {
         }
         .pickerStyle(.segmented)
         .labelsHidden()
+        .controlSize(.mini)
         .fixedSize()
         .help("Event in Calendar, or task in Reminders")
     }
@@ -136,30 +148,19 @@ struct EventCardView: View {
         )
     }
 
-    private func datePicker(_ title: String, selection: Binding<Date>, in range: PartialRangeFrom<Date>? = nil) -> some View {
-        let components: DatePickerComponents = state.draft.isAllDay ? .date : [.date, .hourAndMinute]
-        return Group {
-            if let range {
-                DatePicker(title, selection: selection, in: range, displayedComponents: components)
-            } else {
-                DatePicker(title, selection: selection, displayedComponents: components)
-            }
-        }
-        .datePickerStyle(.compact)
-    }
-
     private func field(_ symbol: String, _ prompt: String, text: Binding<String>) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: symbol)
+                .font(.system(size: 10.5))
                 .foregroundStyle(.secondary)
-                .frame(width: 16)
+                .frame(width: 12)
             TextField(prompt, text: text, axis: .vertical)
                 .textFieldStyle(.plain)
-                .lineLimit(1...3)
+                .lineLimit(1...2)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 8))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color.white.opacity(0.07), in: .rect(cornerRadius: 7))
     }
 
     @ViewBuilder
@@ -184,30 +185,41 @@ struct EventCardView: View {
     }
 }
 
-/// Picks a calendar or reminders list, with its colour and account.
+/// A small menu showing the calendar or list's colour dot and name.
 struct CalendarPicker: View {
     let calendars: [EKCalendar]
     @Binding var selection: String
 
     var body: some View {
-        if !calendars.isEmpty {
-            Picker(selection: $selection) {
+        if let current = calendars.first(where: { $0.calendarIdentifier == selection }) ?? calendars.first {
+            Menu {
                 ForEach(calendars, id: \.calendarIdentifier) { item in
-                    HStack {
-                        Image(nsImage: Self.swatch(item.color))
-                        Text(item.title)
-                        Text(item.source.title).foregroundStyle(.secondary)
+                    Button {
+                        selection = item.calendarIdentifier
+                    } label: {
+                        Label {
+                            Text("\(item.title) · \(item.source.title)")
+                        } icon: {
+                            Image(nsImage: Self.swatch(item.color))
+                        }
                     }
-                    .tag(item.calendarIdentifier)
                 }
             } label: {
-                Image(systemName: "tray.full")
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 4) {
+                    Circle().fill(Color(nsColor: current.color)).frame(width: 7, height: 7)
+                    Text(current.title).lineLimit(1)
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
             }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
     }
 
-    /// Menu items render SwiftUI shapes poorly, so draw the color dot as an image.
+    /// Menu items render SwiftUI shapes poorly, so draw the colour dot as an image.
     private static func swatch(_ color: NSColor) -> NSImage {
         NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
             color.setFill()
@@ -222,33 +234,31 @@ struct AccessDeniedBanner: View {
     let calendar: CalendarService
 
     var body: some View {
-        let app = kind == .event ? "Calendars" : "Reminders"
-        VStack(alignment: .leading, spacing: 6) {
-            Label("\(kind == .event ? "Calendar" : "Reminders") access is off", systemImage: "lock.trianglebadge.exclamationmark")
-                .font(.callout.weight(.semibold))
-            Text("Turn on Catchy in System Settings › Privacy & Security › \(app), then come back.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Button("Open Privacy Settings") { calendar.openPrivacySettings(for: kind) }
-                .controlSize(.small)
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .foregroundStyle(.orange)
+            Text("\(kind == .event ? "Calendar" : "Reminders") access is off")
+                .font(.system(size: 11.5, weight: .medium))
+            Spacer(minLength: 0)
+            Button("Settings") { calendar.openPrivacySettings(for: kind) }
+                .buttonStyle(.island)
         }
-        .padding(10)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.orange.opacity(0.12), in: .rect(cornerRadius: 10))
+        .padding(7)
+        .background(Color.orange.opacity(0.14), in: .rect(cornerRadius: 9))
     }
 }
 
-/// Says so when the on-device model wasn't used.
+/// A small mark when the on-device model wasn't used; the reason is in its tooltip.
 struct ModelNote: View {
     let state: AppState
 
     var body: some View {
         if !state.usedOnDeviceModel, let reason = state.extractor.unavailableReason {
-            Label(reason, systemImage: "info.circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Image(systemName: "sparkles")
+                .font(.system(size: 10.5))
+                .foregroundStyle(.tertiary)
+                .overlay(Rectangle().frame(width: 14, height: 1.2).rotationEffect(.degrees(-45)).foregroundStyle(.tertiary))
+                .help(reason)
         }
     }
 }

@@ -114,3 +114,9 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - The popover was replaced by the notch island (user request). Lessons above about popover anchoring are
   history; the island positions itself from the notch geometry instead.
 - `IslandButtonStyle`'s inner view can't be named `Body`; it collides with `ButtonStyle.Body`.
+- Island feel (user feedback "very big", "animation feel dropped", "smoother transition" on window switch):
+  keep it ~300 pt wide with the header in the strip beside the notch; never animate `.blur` on the island
+  (per-frame cost on a big view); one interruptible spring (`IslandView.spring`) for every change; on app
+  switch or outside click a pending card collapses to a compact pill (click to reopen) instead of closing;
+  `.environment(\.controlActiveState, .key)` stops controls flashing grey when focus leaves.
+- `.datePickerStyle(.field)` drops the stepper arrows; much tighter than `.compact` on macOS.
