@@ -158,3 +158,6 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   Calendar notification. `CalendarService.alert` (default 15 min, remembered) adds an `EKAlarm`; all-day
   events use 9 AM on the day / day before. Each save also posts a `UNUserNotificationCenter` notification
   (`Notifier`) with Undo/Open actions. Its delegate methods are `nonisolated` and hop to MainActor.
+- Calendar never fires an alert whose time has already passed when the event is saved. "15 min before"
+  on a "meet in 10 mins" event was silent (user: "didnt got any notification"). `EventAlert.effective`
+  falls back to "at start" (none if already started); the bell chip shows the effective alert.

@@ -65,7 +65,7 @@ struct EventCardView: View {
                     destinationPicker
                 }
                 if kind == .event {
-                    AlertPicker(calendar: calendar, allDay: state.draft.isAllDay)
+                    AlertPicker(calendar: calendar, allDay: state.draft.isAllDay, start: state.draft.start)
                 }
                 ModelNote(state: state)
                 Spacer(minLength: 0)
@@ -266,6 +266,7 @@ struct ModelNote: View {
 struct AlertPicker: View {
     @Bindable var calendar: CalendarService
     let allDay: Bool
+    let start: Date
 
     var body: some View {
         Menu {
@@ -282,8 +283,8 @@ struct AlertPicker: View {
             }
         } label: {
             HStack(spacing: 3) {
-                Image(systemName: shown == .none ? "bell.slash" : "bell")
-                Text(shown.shortTitle(allDay: allDay))
+                Image(systemName: effective == .none ? "bell.slash" : "bell")
+                Text(effective.shortTitle(allDay: allDay))
             }
             .font(.system(size: 11, weight: .medium))
             .foregroundStyle(.secondary)
@@ -292,7 +293,16 @@ struct AlertPicker: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .fixedSize()
-        .help("Calendar alert: \(shown.title(allDay: allDay))")
+        .help(help)
+    }
+
+    /// What will really be set, given how soon it starts.
+    private var effective: EventAlert { shown.effective(start: start, allDay: allDay) }
+
+    private var help: String {
+        effective == shown
+            ? "Calendar alert: \(shown.title(allDay: allDay))"
+            : "\(shown.title(allDay: allDay)) has already passed, so the alert will be \(effective.title(allDay: allDay).lowercased())"
     }
 
     /// Minute offsets don't apply to all-day events; show what will actually be used.

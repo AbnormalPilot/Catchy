@@ -107,6 +107,16 @@ enum EventAlert: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The alert that will actually work for an event starting at `start`. If the chosen one's time
+    /// has already passed (a "15 minutes before" on something starting in 10), Calendar would never
+    /// fire it, so fall back to an alert at the start; none if it has already begun.
+    func effective(start: Date, allDay: Bool, now: Date = .now) -> EventAlert {
+        guard let offset = offset(allDay: allDay) else { return .none }
+        if start.addingTimeInterval(offset) > now.addingTimeInterval(30) { return self }
+        if !allDay, start > now.addingTimeInterval(30) { return .atStart }
+        return .none
+    }
+
     func title(allDay: Bool) -> String {
         if allDay {
             switch self {

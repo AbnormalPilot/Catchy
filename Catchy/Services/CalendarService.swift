@@ -132,7 +132,7 @@ final class CalendarService {
         event.notes = draft.notes.isEmpty ? nil : draft.notes
         event.url = draft.url
         event.calendar = targetCalendar ?? store.defaultCalendarForNewEvents
-        if let offset = alert.offset(allDay: draft.isAllDay) {
+        if let offset = alert.effective(start: draft.start, allDay: draft.isAllDay).offset(allDay: draft.isAllDay) {
             event.addAlarm(EKAlarm(relativeOffset: offset))
         }
         return event

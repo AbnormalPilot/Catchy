@@ -120,3 +120,25 @@ struct Parsing {
         #expect(relative.duration?.seconds == 1200)
     }
 }
+
+@Suite("Alerts")
+struct Alerts {
+    private let now = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+    @Test func chosenAlertWhenThereIsTime() {
+        #expect(EventAlert.fifteenMinutes.effective(start: now.addingTimeInterval(3600), allDay: false, now: now) == .fifteenMinutes)
+    }
+
+    @Test func startsTooSoonFallsBackToStart() {
+        // Starts in 10 minutes: "15 minutes before" was 5 minutes ago and would never fire.
+        #expect(EventAlert.fifteenMinutes.effective(start: now.addingTimeInterval(600), allDay: false, now: now) == .atStart)
+    }
+
+    @Test func alreadyStartedHasNoAlert() {
+        #expect(EventAlert.fifteenMinutes.effective(start: now.addingTimeInterval(-60), allDay: false, now: now) == .none)
+    }
+
+    @Test func noneStaysNone() {
+        #expect(EventAlert.none.effective(start: now.addingTimeInterval(3600), allDay: false, now: now) == .none)
+    }
+}
