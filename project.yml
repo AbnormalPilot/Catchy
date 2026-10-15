@@ -44,8 +44,26 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.personal-information.calendars: true
+    scheme:
+      testTargets:
+        - CatchyTests
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.catchy.Catchy
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
+  CatchyTests:
+    type: bundle.unit-test
+    platform: macOS
+    # The date and time-zone logic compiled straight in: no app host, so tests don't
+    # start the menu bar app or watch the clipboard.
+    sources:
+      - CatchyTests
+      - Catchy/Model/EventDraft.swift
+      - Catchy/Services/DateHints.swift
+      - Catchy/Services/TimeZones.swift
+      - Catchy/Services/EventExtractor.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.catchy.CatchyTests
+        GENERATE_INFOPLIST_FILE: YES

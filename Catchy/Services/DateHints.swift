@@ -103,6 +103,22 @@ struct DateHints {
         return "Date phrases found in the text, already resolved:\n" + lines.joined(separator: "\n")
     }
 
+    /// The zone of a detected phrase whose written day and clock time are exactly these
+    /// ("2026-10-22" and 15:00 for "Thursday, Oct 22 at 3:00 pm ET").
+    func zone(writtenAt day: String, _ time: DateComponents) -> TimeZone? {
+        for match in dates where match.hasTime {
+            guard let zone = match.timeZone else { continue }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = zone
+            let written = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: match.date)
+            let writtenDay = String(format: "%04d-%02d-%02d", written.year ?? 0, written.month ?? 0, written.day ?? 0)
+            if writtenDay == day.trimmingCharacters(in: .whitespaces), written.hour == time.hour, written.minute == time.minute {
+                return zone
+            }
+        }
+        return nil
+    }
+
     /// Best-effort drafts without the language model: one per line that has its own date
     /// (a schedule), otherwise one for the whole text.
     func fallbackDrafts(from text: String) -> [EventDraft] {

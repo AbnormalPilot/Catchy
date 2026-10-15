@@ -130,11 +130,14 @@ final class EventExtractor {
     }
 
     static func draft(from generated: GeneratedItem, text: String, hints: DateHints, now: Date) -> EventDraft? {
-        // Times are as written; read them in the zone the text names, if any.
-        let hasTime = parseTime(generated.startTime) != nil
+        // Times are as written; read them in the zone the model says the text names. If it gave none,
+        // borrow one from the detector only when that zone's phrase has this exact day and time.
+        // Otherwise a time the model already converted would be converted twice, and one line's zone
+        // would leak onto another event.
+        let startTime = parseTime(generated.startTime)
         let writtenZone = TimeZones.resolve(generated.timeZone)
-            ?? hints.dates.first(where: { $0.hasTime && $0.timeZone != nil })?.timeZone
-        let zone = hasTime ? writtenZone : nil
+            ?? startTime.flatMap { hints.zone(writtenAt: generated.startDate, $0) }
+        let zone = startTime == nil ? nil : writtenZone
         var calendar = Calendar.current
         if let zone { calendar.timeZone = zone }
 
@@ -150,7 +153,6 @@ final class EventExtractor {
             day = next
         }
 
-        let startTime = parseTime(generated.startTime)
         let isAllDay = startTime == nil
         let start = startTime.flatMap { calendar.date(byAdding: $0, to: day) } ?? day
 
@@ -192,10 +194,27 @@ final class EventExtractor {
         return formatter.date(from: string.trimmingCharacters(in: .whitespaces))
     }
 
-    private static func parseTime(_ string: String) -> DateComponents? {
-        let parts = string.trimmingCharacters(in: .whitespaces).split(separator: ":").compactMap { Int($0) }
-        guard parts.count == 2, (0..<24).contains(parts[0]), (0..<60).contains(parts[1]) else { return nil }
-        return DateComponents(hour: parts[0], minute: parts[1])
+    /// "15:00", and also what models sometimes write instead: "3:00 PM", "3pm", "15:00:00", "9.30".
+    static func parseTime(_ string: String) -> DateComponents? {
+        let text = string.trimmingCharacters(in: .whitespaces).lowercased()
+            .replacingOccurrences(of: ".", with: ":")
+            .replacingOccurrences(of: " ", with: "")
+        let pattern = #"^(\d{1,2})(?::(\d{2}))?(?::\d{2})?(am|pm|a|p)?$"#
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              let hourRange = Range(match.range(at: 1), in: text),
+              var hour = Int(text[hourRange]) else { return nil }
+        let minute = Range(match.range(at: 2), in: text).flatMap { Int(text[$0]) } ?? 0
+        if let suffixRange = Range(match.range(at: 3), in: text) {
+            guard (1...12).contains(hour) else { return nil }
+            let pm = text[suffixRange].hasPrefix("p")
+            if pm && hour < 12 { hour += 12 }
+            if !pm && hour == 12 { hour = 0 }
+        } else if match.range(at: 2).location == NSNotFound {
+            return nil  // a bare "3" is too ambiguous to be a time
+        }
+        guard (0..<24).contains(hour), (0..<60).contains(minute) else { return nil }
+        return DateComponents(hour: hour, minute: minute)
     }
 
     private static func tidyTitle(_ title: String) -> String {

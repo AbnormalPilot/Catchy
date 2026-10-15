@@ -7,11 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E8C034F89F17AADB14D3AE8 /* EventDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F786C5255027B6D9B592FEC /* EventDraft.swift */; };
+		14B376D98739C55A74BD7C3F /* EventExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DC415448E7E5626A0D66C0 /* EventExtractor.swift */; };
 		1B87FCA3EC21E00C59B8A032 /* Island.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4009DA0A8D47346D912F99C0 /* Island.swift */; };
 		1F47CBC08E126B05F5663F31 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B95E942F52ADBAFACD19021 /* AppState.swift */; };
 		3FC7E402EC41E37145DDABF2 /* ClipboardWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = B050515E61B37636A476E14F /* ClipboardWatcher.swift */; };
+		5449E39D150728281F55CC9D /* TimeZoneTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11697F35ABBA5E88CE455D7B /* TimeZoneTests.swift */; };
 		585C9BCF1B153024D1648A17 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A1C66F86FE44CBCD6609D6C /* Assets.xcassets */; };
 		5B44DA13460DCBA796212AB4 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04428EDFE3DA3194EE09363E /* CalendarService.swift */; };
+		62B96C48E4F4FEA6A2CF7B62 /* DateHints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71783E885A68BE407F2087D4 /* DateHints.swift */; };
 		6730D54FB436803ED3B1ECC0 /* TimeZones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BBFE50F4C26664E5274DA5 /* TimeZones.swift */; };
 		67BB82ACEF7FC46FD13460E2 /* CatchyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260426AB0F64E15FF312892B /* CatchyApp.swift */; };
 		735D9C997D726732C037F95C /* EventDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F786C5255027B6D9B592FEC /* EventDraft.swift */; };
@@ -25,10 +29,13 @@
 		CC180C1A133083FF93875A21 /* RegionSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8F7AA5AA052F81EE5D079E /* RegionSelector.swift */; };
 		D37F2AD23B62CB77601CFBE6 /* DateHints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71783E885A68BE407F2087D4 /* DateHints.swift */; };
 		DDB1853E482AA0919090F3B9 /* ScreenCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687A7BB0E7445262CD6F9F81 /* ScreenCapture.swift */; };
+		E2A7C5FB52819CB7D432A6D7 /* TimeZones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BBFE50F4C26664E5274DA5 /* TimeZones.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		03AF7859BE605F0D6CEB10C1 /* CatchyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CatchyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		04428EDFE3DA3194EE09363E /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
+		11697F35ABBA5E88CE455D7B /* TimeZoneTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeZoneTests.swift; sourceTree = "<group>"; };
 		19BBFE50F4C26664E5274DA5 /* TimeZones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeZones.swift; sourceTree = "<group>"; };
 		1B95E942F52ADBAFACD19021 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		260426AB0F64E15FF312892B /* CatchyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatchyApp.swift; sourceTree = "<group>"; };
@@ -56,6 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				381B8B62947E69B056D5AB3D /* Catchy */,
+				40861BEEDE8FB3654C78F6B4 /* CatchyTests */,
 				6F04889427DC3D1037C8C5ED /* Products */,
 			);
 			sourceTree = "<group>";
@@ -92,10 +100,19 @@
 			path = Catchy;
 			sourceTree = "<group>";
 		};
+		40861BEEDE8FB3654C78F6B4 /* CatchyTests */ = {
+			isa = PBXGroup;
+			children = (
+				11697F35ABBA5E88CE455D7B /* TimeZoneTests.swift */,
+			);
+			path = CatchyTests;
+			sourceTree = "<group>";
+		};
 		6F04889427DC3D1037C8C5ED /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				525B865A4E770CA3CB2A7D83 /* Catchy.app */,
+				03AF7859BE605F0D6CEB10C1 /* CatchyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -156,6 +173,23 @@
 			productReference = 525B865A4E770CA3CB2A7D83 /* Catchy.app */;
 			productType = "com.apple.product-type.application";
 		};
+		31A308B76F7256AE8C90565B /* CatchyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = EB277478172187130805DB94 /* Build configuration list for PBXNativeTarget "CatchyTests" */;
+			buildPhases = (
+				AF0234BFC661D856FD8E68E4 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CatchyTests;
+			packageProductDependencies = (
+			);
+			productName = CatchyTests;
+			productReference = 03AF7859BE605F0D6CEB10C1 /* CatchyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -166,6 +200,10 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					069E60B0151633E6CE15DD92 = {
+						DevelopmentTeam = 56T7M6558P;
+						ProvisioningStyle = Automatic;
+					};
+					31A308B76F7256AE8C90565B = {
 						DevelopmentTeam = 56T7M6558P;
 						ProvisioningStyle = Automatic;
 					};
@@ -186,6 +224,7 @@
 			projectRoot = "";
 			targets = (
 				069E60B0151633E6CE15DD92 /* Catchy */,
+				31A308B76F7256AE8C90565B /* CatchyTests */,
 			);
 		};
 /* End PBXProject section */
@@ -226,6 +265,18 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AF0234BFC661D856FD8E68E4 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				62B96C48E4F4FEA6A2CF7B62 /* DateHints.swift in Sources */,
+				0E8C034F89F17AADB14D3AE8 /* EventDraft.swift in Sources */,
+				14B376D98739C55A74BD7C3F /* EventExtractor.swift in Sources */,
+				5449E39D150728281F55CC9D /* TimeZoneTests.swift in Sources */,
+				E2A7C5FB52819CB7D432A6D7 /* TimeZones.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
@@ -245,6 +296,22 @@
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		542A4DE2A4ECF174FAF66448 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.catchy.CatchyTests;
+				SDKROOT = macosx;
+			};
+			name = Release;
 		};
 		68E9F110521769CA7D39788F /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -398,6 +465,22 @@
 			};
 			name = Release;
 		};
+		C5AEE0CD0B6A29A76AA2BA55 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.catchy.CatchyTests;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -415,6 +498,15 @@
 			buildConfigurations = (
 				68E9F110521769CA7D39788F /* Debug */,
 				8CFABB68DBDF777AAF08FC80 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		EB277478172187130805DB94 /* Build configuration list for PBXNativeTarget "CatchyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C5AEE0CD0B6A29A76AA2BA55 /* Debug */,
+				542A4DE2A4ECF174FAF66448 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
