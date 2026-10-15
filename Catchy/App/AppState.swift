@@ -72,6 +72,7 @@ final class AppState {
 
     func prepare() {
         extractor.prewarm()
+        notifier.refreshPermission()
         notifier.onUndo = { [weak self] saved in self?.undo(saved) }
         notifier.onOpen = { [weak self] reminders in
             reminders ? self?.calendar.openRemindersApp() : self?.calendar.openCalendarApp()

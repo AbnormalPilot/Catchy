@@ -22,6 +22,19 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         ])
     }
 
+    /// Every kind Notification settings can offer: banners/alerts, sounds and badges. Time Sensitive
+    /// comes from the entitlement. Asked at the first save; re-asked at launch so an existing grant
+    /// picks up kinds added later (macOS doesn't prompt again for that).
+    static let kinds: UNAuthorizationOptions = [.alert, .sound, .badge]
+
+    func refreshPermission() {
+        Task {
+            let status = await center.notificationSettings().authorizationStatus
+            guard status == .authorized || status == .provisional else { return }
+            _ = try? await center.requestAuthorization(options: Self.kinds)
+        }
+    }
+
     func announce(_ saved: SavedCatch) {
         let content = UNMutableNotificationContent()
         let onlyReminders = saved.eventIDs.isEmpty
@@ -33,13 +46,15 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             content.body = saved.titles.joined(separator: " · ")
         }
         if saved.syncsWithICloud { content.subtitle = "Syncing to your iPhone" }
+        content.sound = .default
+        content.interruptionLevel = .active
         content.categoryIdentifier = Self.category
         content.userInfo = ["events": saved.eventIDs, "reminders": saved.reminderIDs]
 
         Task {
             // Asks the first time (macOS shows that as a notification itself).
             if await center.notificationSettings().authorizationStatus == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound])
+                _ = try? await center.requestAuthorization(options: Self.kinds)
             }
             try? await center.add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
         }

@@ -44,6 +44,7 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.personal-information.calendars: true
+        com.apple.developer.usernotifications.time-sensitive: true
     scheme:
       testTargets:
         - CatchyTests

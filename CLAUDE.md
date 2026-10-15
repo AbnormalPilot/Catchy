@@ -165,3 +165,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   has AppIcon.icns). Every extra build of Catchy.app (e.g. a fresh-clone test build in the scratchpad)
   registers another copy. After such a build run `lsregister -u <that copy>`. To refresh: `touch` the app,
   `lsregister -f` it, `killall NotificationCenter usernoted`, then reopen System Settings.
+- Notification settings only list the kinds an app asks for. `Notifier.kinds` = alert + sound + badge,
+  re-requested at launch so an existing grant picks up new kinds. "Time Sensitive" needs the
+  `com.apple.developer.usernotifications.time-sensitive` entitlement; `-allowProvisioningUpdates` made a
+  Mac team profile for it automatically, and TCC grants (Calendar etc.) survived the re-sign.
