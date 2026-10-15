@@ -29,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let hotKey = ModifierTapHotKey { [weak self] in self?.state.captureScreen() }
         hotKey.onStatusChange = { [weak self] active in self?.state.shortcutIsActive = active }
+        hotKey.onEscape = { [weak self] in self?.state.escapePressed() }
         hotKey.start()
         self.hotKey = hotKey
 

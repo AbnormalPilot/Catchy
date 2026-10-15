@@ -149,7 +149,9 @@ private struct ListeningView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 Waveform(level: state.voice.level)
-                Text(state.voice.transcript.isEmpty ? "Listening… say when and what" : "Listening…")
+                Text(state.voice.transcript.isEmpty
+                     ? (state.listeningPurpose == .edit ? "Say a change, like “make it 6 pm”" : "Listening… say when and what")
+                     : "Listening…")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
             }

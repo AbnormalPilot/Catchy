@@ -68,6 +68,7 @@ targets:
       - Catchy/Services/TimeZones.swift
       - Catchy/Services/EventExtractor.swift
       - Catchy/Services/TextCleanup.swift
+      - Catchy/Services/VoiceEdit.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.catchy.CatchyTests

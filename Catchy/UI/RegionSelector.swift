@@ -10,7 +10,9 @@ final class RegionSelector {
         finish(with: nil)
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
-            NSApp.activate()
+            // Only the active app gets Esc. Plain activate() is a request macOS can refuse when
+            // the ⌥⌘ tap starts this from another app; the event-tap backup covers that case too.
+            NSApp.activate(ignoringOtherApps: true)
             windows = NSScreen.screens.map { screen in
                 let window = SelectionWindow(screen: screen) { [weak self] rect in self?.finish(with: rect) }
                 window.orderFrontRegardless()
@@ -20,6 +22,12 @@ final class RegionSelector {
             let mouse = NSEvent.mouseLocation
             (windows.first { $0.frame.contains(mouse) } ?? windows.first)?.makeKey()
         }
+    }
+
+    var isSelecting: Bool { continuation != nil }
+
+    func cancel() {
+        finish(with: nil)
     }
 
     private func finish(with rect: CGRect?) {

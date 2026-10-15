@@ -62,6 +62,9 @@ One surface: a compact pitch-black island, about 300 pt wide, with its header be
 - Casual speech becomes a clean card: fillers dropped, "5.30"/"at one"/"half past seven" read as times, "at the Starbucks in Bandra" becomes the location.
   - [ ] "So tomorrow, I have to meet Ravi around 5.30, probably at the Starbucks in Bandra" gives "Meet Ravi", tomorrow 17:30, at Starbucks in Bandra.
 
+### Editing by voice
+- A 🎙 button on the card takes a spoken change (learner: "have the option to edit draft using voice"): "make it 6 pm", "move it to Friday", "for 2 hours", "at the Starbucks in Bandra", "call it Physics class", "make it a reminder", "all day". Only what's mentioned changes; a short green line says what did ("Changed title and time").
+
 ### Services menu *(rec.)*
 - In any app, select text, right-click, then Services → **Catch with Catchy** to open the card from that text.
   - [ ] In Notes, selecting "Lunch with Sam tomorrow 1pm" and using the service opens a card for tomorrow at 13:00.

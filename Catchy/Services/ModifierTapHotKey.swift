@@ -7,6 +7,8 @@ import AppKit
 /// type; only whether a key was pressed while ⌥⌘ was down, which cancels the tap.
 final class ModifierTapHotKey {
     private let action: () -> Void
+    /// Esc, seen even when Catchy isn't the active app (the capture overlay and dictation use it).
+    var onEscape: () -> Void = {}
     private var tap: CFMachPort?
     private var retry: Timer?
 
@@ -49,8 +51,9 @@ final class ModifierTapHotKey {
             callback: { _, type, event, userInfo in
                 if let userInfo {
                     let hotKey = Unmanaged<ModifierTapHotKey>.fromOpaque(userInfo).takeUnretainedValue()
+                    let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
                     // The run loop source is on the main run loop.
-                    MainActor.assumeIsolated { hotKey.handle(type, flags: event.flags) }
+                    MainActor.assumeIsolated { hotKey.handle(type, flags: event.flags, keyCode: keyCode) }
                 }
                 return Unmanaged.passUnretained(event)
             },
@@ -65,7 +68,8 @@ final class ModifierTapHotKey {
         return true
     }
 
-    private func handle(_ type: CGEventType, flags: CGEventFlags) {
+    private func handle(_ type: CGEventType, flags: CGEventFlags, keyCode: Int64) {
+        if type == .keyDown, keyCode == 53 { onEscape() }  // Esc
         switch type {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }

@@ -103,17 +103,37 @@ final class AppState {
     }
 
     /// The hotkey flow: drag over part of the screen, OCR it, then extract like copied text.
+    /// Esc from anywhere (via the shortcut's event tap): cancels the capture overlay or dictation.
+    /// Everything else keeps Esc for the app you're in.
+    func escapePressed() {
+        if regionSelector.isSelecting {
+            regionSelector.cancel()
+        } else if phase == .listening {
+            cancelListening()
+        }
+    }
+
     /// Reading or listening: a stray click or app switch shouldn't cancel either.
     var isBusy: Bool { phase == .reading || phase == .listening }
 
     // MARK: Voice
 
+    enum ListeningPurpose { case newCatch, edit }
+    /// A new catch from speech, or a spoken change to the card that's open.
+    private(set) var listeningPurpose = ListeningPurpose.newCatch
+    /// "Changed time and place", shown briefly on the card after a voice edit.
+    private(set) var editSummary: String?
+
     /// Say it however you like ("uh, tomorrow, meet Ravi around five, maybe Starbucks").
     /// Stops on Done, Return, or a pause after you've said something.
-    func startListening() {
+    func startListening(for purpose: ListeningPurpose = .newCatch) {
         work?.cancel()
-        source = .voice
-        rawText = ""
+        listeningPurpose = purpose
+        editSummary = nil
+        if purpose == .newCatch {
+            source = .voice
+            rawText = ""
+        }
         phase = .listening
         showIsland()
         work = Task {
@@ -142,6 +162,14 @@ final class AppState {
         work?.cancel()
         Task {
             let said = await voice.finish()
+            if listeningPurpose == .edit {
+                phase = .review
+                guard !said.isEmpty else { return showEditSummary("Didn't hear anything") }
+                let result = await extractor.edit(draft, by: said)
+                draft = result.draft
+                showEditSummary(VoiceEdit.summary(result.changed))
+                return
+            }
             guard !said.isEmpty else {
                 phase = .failed("Catchy didn't hear anything. Check the microphone and try again.")
                 return
@@ -150,11 +178,19 @@ final class AppState {
         }
     }
 
+    private func showEditSummary(_ text: String) {
+        editSummary = text
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if editSummary == text { editSummary = nil }
+        }
+    }
+
     func cancelListening() {
         guard phase == .listening else { return }
         work?.cancel()
         voice.cancel()
-        phase = .idle
+        phase = listeningPurpose == .edit ? .review : .idle
     }
 
     func captureScreen() {

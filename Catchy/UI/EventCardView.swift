@@ -30,7 +30,25 @@ struct EventCardView: View {
                     .font(.system(size: 15, weight: .semibold))
                     .textFieldStyle(.plain)
                     .lineLimit(1...2)
+                Button {
+                    state.startListening(for: .edit)
+                } label: {
+                    Image(systemName: "mic")
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 20)
+                        .background(Color.white.opacity(0.1), in: .rect(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
+                .help("Change it by voice: “make it 6 pm”, “move it to Friday”, “at Starbucks”")
                 kindPicker
+            }
+
+            if let summary = state.editSummary {
+                Label(summary, systemImage: "waveform")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.green)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
             whenRow

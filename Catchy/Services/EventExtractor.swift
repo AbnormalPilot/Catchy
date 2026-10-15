@@ -132,6 +132,59 @@ final class EventExtractor {
         return response.content.items.compactMap { Self.draft(from: $0, text: text, hints: hints, now: now) }
     }
 
+    /// Applies a spoken change to a card. The on-device model handles any phrasing; without it,
+    /// `VoiceEdit`'s rules cover the common ones.
+    func edit(_ draft: EventDraft, by instruction: String, now: Date = .now) async -> VoiceEdit.Result {
+        let fallback = VoiceEdit.apply(instruction, to: draft, now: now)
+        guard isModelAvailable else { return fallback }
+        let day = DateFormatter()
+        day.locale = Locale(identifier: "en_US_POSIX")
+        day.dateFormat = "yyyy-MM-dd"
+        let clock = DateFormatter()
+        clock.locale = Locale(identifier: "en_US_POSIX")
+        clock.dateFormat = "HH:mm"
+        let kind = draft.kind == .event ? "event" : "task"
+        let prompt = """
+            Today is \(now.formatted(.dateTime.weekday(.wide).day().month(.wide).year())).
+            Current \(kind):
+            title: \(draft.title)
+            date: \(day.string(from: draft.start))
+            start: \(draft.isAllDay ? "(all day)" : clock.string(from: draft.start))
+            end: \(draft.isAllDay ? "(all day)" : "\(day.string(from: draft.end)) \(clock.string(from: draft.end))")
+            location: \(draft.location)
+            notes: \(draft.notes)
+
+            Spoken change: "\(instruction)"
+            Return the whole \(kind) with only that change applied; keep everything else exactly the same.
+            Times are local; leave timeZone empty.
+            """
+        do {
+            let session = LanguageModelSession(instructions: Self.instructions)
+            let response = try await session.respond(to: prompt, generating: GeneratedItem.self, options: GenerationOptions(sampling: .greedy))
+            guard var updated = Self.draft(from: response.content, text: instruction, hints: DateHints(text: ""), now: now) else {
+                return fallback
+            }
+            updated.url = draft.url
+            updated.isIncluded = draft.isIncluded
+            return VoiceEdit.Result(draft: updated, changed: Self.differences(from: draft, to: updated))
+        } catch {
+            log.error("Voice edit failed: \(error.localizedDescription, privacy: .public)")
+            return fallback
+        }
+    }
+
+    private static func differences(from old: EventDraft, to new: EventDraft) -> [String] {
+        var changed: [String] = []
+        if old.kind != new.kind { changed.append("type") }
+        if old.title != new.title { changed.append("title") }
+        if !Calendar.current.isDate(old.start, inSameDayAs: new.start) { changed.append("day") }
+        if old.start != new.start || old.isAllDay != new.isAllDay { changed.append("time") }
+        else if old.end != new.end { changed.append("length") }
+        if old.location != new.location { changed.append("place") }
+        if old.notes != new.notes { changed.append("notes") }
+        return changed
+    }
+
     static func draft(from generated: GeneratedItem, text: String, hints: DateHints, now: Date) -> EventDraft? {
         // Times are as written; read them in the zone the model says the text names. If it gave none,
         // borrow one from the detector only when that zone's phrase has this exact day and time.

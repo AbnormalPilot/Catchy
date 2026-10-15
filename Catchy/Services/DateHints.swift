@@ -209,7 +209,7 @@ struct DateHints {
         return lower.range(of: #"\d\s*(:\d{2}|am|pm|a\.m\.|p\.m\.|h\b)"#, options: .regularExpression) != nil
     }
 
-    private static func isTimeOnly(_ phrase: String) -> Bool {
+    static func isTimeOnly(_ phrase: String) -> Bool {
         let dayWords = #"(mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|today|tomorrow|tonight|\d+\s*/\s*\d+)"#
         return phrase.lowercased().range(of: dayWords, options: .regularExpression) == nil
     }

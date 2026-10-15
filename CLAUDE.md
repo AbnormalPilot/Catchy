@@ -175,3 +175,9 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   Test without a mic: `say -o x.aiff "…"` then `analyzer.analyzeSequence(from: AVAudioFile)`.
 - Speech comes out as "5.30" and "at one"; neither Apple detector reads those. `TextCleanup.normalized`
   runs on every extraction. Add a test in `CatchyTests/SpokenTests.swift` for each new phrasing.
+- Esc: the capture overlay only got Esc if Catchy was the active app, and macOS can refuse `activate()`
+  when the ⌥⌘ tap fires from another app. `RegionSelector` now force-activates, and the hotkey's event
+  tap reports Esc (keycode 53) to `AppState.escapePressed()` as a backup (overlay or dictation only; other
+  apps keep their Esc). Test: post flagsChanged ⌘ then ⌘⌥ then none, screenshot, post Esc, screenshot.
+- Voice edits: `DateHints` adds a stand-in start (empty phrase) for a bare length; ignore it when editing,
+  or "for 2 hours" moves the event instead of lengthening it. Tests in `CatchyTests/VoiceEditTests.swift`.
