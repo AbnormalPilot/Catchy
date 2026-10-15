@@ -42,11 +42,15 @@ struct EventDraft: Equatable, Identifiable {
 enum CaptureSource: String {
     case clipboard = "Clipboard"
     case screen = "Screen"
+    case image = "Image"
+    case service = "Services"
 
     var symbol: String {
         switch self {
         case .clipboard: "doc.on.clipboard"
         case .screen: "viewfinder"
+        case .image: "photo"
+        case .service: "contextualmenu.and.cursorarrow"
         }
     }
 }

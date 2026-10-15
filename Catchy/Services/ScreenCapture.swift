@@ -35,7 +35,11 @@ enum ScreenReader {
             height: appKitRect.height
         )
         let image = try await SCScreenshotManager.captureImage(in: displayRect)
+        return try await recognizeText(in: image)
+    }
 
+    /// On-device OCR, also used for images copied to the clipboard.
+    nonisolated static func recognizeText(in image: CGImage) async throws -> String {
         var request = RecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true

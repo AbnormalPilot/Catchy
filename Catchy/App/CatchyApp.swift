@@ -21,8 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = StatusItemController(state: state)
 
-        clipboard.onEventText = { [weak self] text in
-            self?.state.catchText(text, from: .clipboard)
+        clipboard.onEventText = { [weak self] text, source in
+            self?.state.catchText(text, from: source)
         }
         clipboard.start()
 

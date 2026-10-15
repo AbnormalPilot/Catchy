@@ -59,7 +59,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Copy a deadline and add it; check Reminders on the iPhone.
   Commit: `Send tasks to Reminders`
 
-- [ ] **6. Copy an image or iPhone photo**
+- [x] **6. Copy an image or iPhone photo**
   Becomes usable: Copying a picture of a flyer (on the Mac or the iPhone) opens the card.
   Why now: The strongest demo moment; reuses the OCR from slice 2.
   PRD ref: `prd.md > Image catching`

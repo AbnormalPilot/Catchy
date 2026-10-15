@@ -7,7 +7,9 @@ import AppKit
 /// It asks the system's privacy-preserving detector first, so the pasteboard contents
 /// are only read when they actually contain a date.
 final class ClipboardWatcher {
-    var onEventText: (String) -> Void = { _ in }
+    var onEventText: (String, CaptureSource) -> Void = { _, _ in }
+    /// Auto-catching off ("Pause Catching" in the menu). Manual catching still works.
+    var isPaused = false
 
     private let pasteboard = NSPasteboard.general
     private var lastChangeCount = NSPasteboard.general.changeCount
@@ -32,7 +34,15 @@ final class ClipboardWatcher {
         lastChangeCount = pasteboard.changeCount
 
         let types = Set(pasteboard.types ?? [])
-        guard types.contains(.string), types.isDisjoint(with: Self.ignoredTypes) else { return }
+        guard !isPaused, types.isDisjoint(with: Self.ignoredTypes) else { return }
+
+        // A picture (a copied screenshot, or a photo copied on the iPhone). Copied files also
+        // carry an icon image, so skip anything that is a file.
+        if !types.contains(.string), !types.contains(.fileURL), !types.isDisjoint(with: Self.imageTypes) {
+            catchImage(changeCount: lastChangeCount)
+            return
+        }
+        guard types.contains(.string) else { return }
 
         let changeCount = lastChangeCount
         Task {
@@ -43,7 +53,24 @@ final class ClipboardWatcher {
                   text != lastText
             else { return }
             lastText = text
-            onEventText(text)
+            onEventText(text, .clipboard)
+        }
+    }
+
+    private static let imageTypes: Set<NSPasteboard.PasteboardType> = [
+        .png, .tiff, .init("public.jpeg"), .init("public.heic"),
+    ]
+
+    private func catchImage(changeCount: Int) {
+        guard let image = NSImage(pasteboard: pasteboard),
+              let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+        Task {
+            guard let text = try? await ScreenReader.recognizeText(in: cgImage),
+                  changeCount == pasteboard.changeCount,
+                  !DateHints(text: text).dates.isEmpty
+            else { return }
+            lastText = text
+            onEventText(text, .image)
         }
     }
 
