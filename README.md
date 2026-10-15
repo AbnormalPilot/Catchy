@@ -74,7 +74,7 @@ If one is denied, the card says so and links to the right pane in System Setting
 
 ## Privacy
 
-- Before reading the clipboard, Catchy asks macOS (`NSPasteboard.detectedPatterns`) whether it contains an event. Anything else you copy is never read.
+- Catchy asks macOS (`NSPasteboard.detectedPatterns`) whether the clipboard contains an event. Longer text is only read when macOS says it does. Short, chat-length text is also checked on-device for times like "in 20 mins", which macOS misses. Nothing is stored or sent anywhere.
 - Copies that password managers mark as secret are ignored.
 - Text recognition (Vision) and understanding (Foundation Models) run on-device. The app makes no network requests.
 

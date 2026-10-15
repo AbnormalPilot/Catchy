@@ -22,7 +22,7 @@ struct DateHints {
     let url: URL?
     private let lines: [String]
 
-    init(text: String) {
+    init(text: String, now: Date = .now) {
         lines = text.components(separatedBy: .newlines)
         let types: NSTextCheckingResult.CheckingType = [.date, .address, .link]
         guard let detector = try? NSDataDetector(types: types.rawValue) else {
@@ -61,6 +61,17 @@ struct DateHints {
             default:
                 break
             }
+        }
+        // Neither Apple detector understands "in 20 mins" / "for 20 mins"; handle those here.
+        let relative = Self.relativeTimes(in: text, now: now)
+        if dates.isEmpty, let start = relative.start {
+            dates.append(start)
+            phrases.append(start.phrase)
+        }
+        if let duration = relative.duration, let first = dates.first, first.hasTime {
+            dates[0] = DateMatch(date: first.date, duration: duration.seconds, phrase: first.phrase,
+                                 hasTime: true, timeZone: first.timeZone, line: first.line)
+            phrases.append(duration.phrase)
         }
         self.dates = dates
         self.phrases = phrases
@@ -125,6 +136,32 @@ struct DateHints {
         )
     }
 
+    /// "in 20 mins" or a bare "20 mins" is a start time from now; "for 20 mins" is how long it lasts.
+    static func relativeTimes(in text: String, now: Date) -> (start: DateMatch?, duration: (seconds: TimeInterval, phrase: String)?) {
+        let pattern = #"(?i)\b(in|for)?\s*(\d{1,3}|an?|half an?)\s*(minutes?|mins?|hours?|hrs?)\b"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return (nil, nil) }
+        var start: DateMatch?
+        var duration: (TimeInterval, String)?
+        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let whole = Range(match.range, in: text), let amountRange = Range(match.range(at: 2), in: text),
+                  let unitRange = Range(match.range(at: 3), in: text) else { continue }
+            let amountText = text[amountRange].lowercased()
+            let amount: Double = amountText.hasPrefix("half") ? 0.5 : (Double(amountText) ?? 1)
+            let seconds = amount * (text[unitRange].lowercased().hasPrefix("h") ? 3600 : 60)
+            let phrase = text[whole].trimmingCharacters(in: .whitespaces)
+            let preposition = Range(match.range(at: 1), in: text).map { text[$0].lowercased() }
+            if preposition == "for" {
+                if duration == nil { duration = (seconds, phrase) }
+            } else if start == nil {
+                // Whole minutes, so the card doesn't show 15:25:37.
+                let date = Calendar.current.date(bySetting: .second, value: 0, of: now.addingTimeInterval(seconds)) ?? now
+                let line = text[..<whole.lowerBound].reduce(0) { $1.isNewline ? $0 + 1 : $0 }
+                start = DateMatch(date: date, duration: 0, phrase: phrase, hasTime: true, timeZone: nil, line: line)
+            }
+        }
+        return (start, duration)
+    }
+
     /// "Submit the report by Friday", "rent due on the 1st", "renew passport before March".
     static func looksLikeTask(_ line: String) -> Bool {
         let pattern = #"\b(due|deadline|submit|pay|renew|expires?|apply|return|finish|send|by|before)\b"#
@@ -170,8 +207,13 @@ struct DateHints {
         candidate = candidate.replacingOccurrences(of: #"\s+(by|on|at|before|from|until|for|this|next)$"#, with: "",
                                                    options: [.regularExpression, .caseInsensitive])
         guard candidate.count >= 3 else { return "" }
-        let title = String(candidate.prefix(60))
-        // Flyers shout; calendars don't.
-        return title == title.uppercased() ? title.capitalized : title
+        return tidy(String(candidate.prefix(60)))
+    }
+
+    /// Flyers shout and chats whisper; calendar titles do neither.
+    static func tidy(_ title: String) -> String {
+        if title == title.uppercased() { return title.capitalized }
+        guard let first = title.first, first.isLowercase else { return title }
+        return first.uppercased() + title.dropFirst()
     }
 }

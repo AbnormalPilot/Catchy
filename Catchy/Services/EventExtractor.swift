@@ -198,7 +198,6 @@ final class EventExtractor {
     }
 
     private static func tidyTitle(_ title: String) -> String {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "!.")))
-        return trimmed == trimmed.uppercased() ? trimmed.capitalized : trimmed
+        DateHints.tidy(title.trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "!."))))
     }
 }

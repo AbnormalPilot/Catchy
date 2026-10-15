@@ -99,3 +99,6 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - The sandboxed app's defaults live in `~/Library/Containers/app.catchy.Catchy/Data/Library/Preferences/`.
 - "Apple Intelligence is off" on this Mac was `appleIntelligenceNotEnabled` (M4, macOS 26.2, en-US, eligible):
   a Settings toggle, not a hardware limit. Check with a one-line script printing `SystemLanguageModel.default.availability`.
+- Neither `NSDataDetector` nor the pasteboard's `detectedPatterns`/`detectedValues` understand relative times
+  ("meet with sujan 20 mins", "in 2 hours", "for 15 mins"). `DateHints.relativeTimes` handles them, and the
+  clipboard gate also lets chat-length text (≤280 chars) through when it has one. README's privacy note says so.

@@ -4,8 +4,9 @@ import AppKit
 /// copies that look like an event. Text copied on an iPhone arrives here too, via
 /// Universal Clipboard.
 ///
-/// It asks the system's privacy-preserving detector first, so the pasteboard contents
-/// are only read when they actually contain a date.
+/// It asks the system's privacy-preserving detector first. Longer text is only read when that
+/// detector finds an event; chat-length text is also checked on-device for "in 20 mins"-style
+/// times, which the system detector misses. Nothing is stored or sent anywhere.
 final class ClipboardWatcher {
     var onEventText: (String, CaptureSource) -> Void = { _, _ in }
     /// Auto-catching off ("Pause Catching" in the menu). Manual catching still works.
@@ -46,11 +47,13 @@ final class ClipboardWatcher {
 
         let changeCount = lastChangeCount
         Task {
-            guard await Self.containsEvent(),
-                  changeCount == pasteboard.changeCount,
+            let systemSeesEvent = await Self.containsEvent()
+            guard changeCount == pasteboard.changeCount,
                   let text = pasteboard.string(forType: .string)?.trimmingCharacters(in: .whitespacesAndNewlines),
                   (4...5000).contains(text.count),
-                  text != lastText
+                  text != lastText,
+                  // macOS misses "meet with Sujan in 20 mins"; chat-length text gets a local check for that.
+                  systemSeesEvent || (text.count <= 280 && DateHints.relativeTimes(in: text, now: .now).start != nil)
             else { return }
             lastText = text
             onEventText(text, .clipboard)
