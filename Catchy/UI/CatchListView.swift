@@ -33,11 +33,7 @@ struct CatchListView: View {
                 Button {
                     state.save()
                 } label: {
-                    if state.isSaving {
-                        ProgressView().controlSize(.mini)
-                    } else {
-                        Text(saveTitle)
-                    }
+                    AddLabel(title: saveTitle, symbol: "plus", isSaving: state.isSaving)
                 }
                 .buttonStyle(.islandProminent)
                 .keyboardShortcut(.defaultAction)

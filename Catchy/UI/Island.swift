@@ -282,6 +282,8 @@ final class IslandController {
             MainActor.assumeIsolated { self?.panel.orderFrontRegardless() }
         }
 
+        observeSaves()
+
         // Switching apps tucks the island away; a waiting card comes back on hover.
         appSwitches = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
@@ -376,6 +378,31 @@ final class IslandController {
                 }
                 pendingLeave = leave
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: leave)
+            }
+        }
+    }
+
+    /// After a save, the confirmation stays a moment (for Undo), then the island tucks itself away.
+    private func observeSaves() {
+        withObservationTracking {
+            _ = state.phase
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if case .saved = self.state.phase { self.dismissSavedSoon(after: 3.2) }
+                self.observeSaves()
+            }
+        }
+    }
+
+    private func dismissSavedSoon(after delay: TimeInterval) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+            guard let self, case .saved = self.state.phase, self.model.mode == .expanded else { return }
+            // Still reading it (pointer on the island): give it another moment.
+            if self.shapeRect().contains(NSEvent.mouseLocation) {
+                self.dismissSavedSoon(after: 1)
+            } else {
+                self.hide(reason: "saved")
             }
         }
     }

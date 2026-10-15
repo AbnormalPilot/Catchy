@@ -154,54 +154,108 @@ private struct ScreenAccessView: View {
     }
 }
 
+/// The confirmation: a green check pops in and draws itself, the card shrinks to one line, and
+/// the island tucks itself away a few seconds later (Undo stays until then).
 private struct SavedView: View {
     let saved: SavedCatch
     let state: AppState
-    @State private var appeared = false
 
     private var onlyReminders: Bool { saved.eventIDs.isEmpty }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.green)
-                    .symbolEffect(.bounce, value: appeared)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(saved.count == 1 ? (saved.titles.first ?? "") : "Added \(saved.count) items")
-                        .font(.system(size: 13, weight: .semibold))
-                        .lineLimit(1)
-                    Text(subtitle)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
+        HStack(spacing: 10) {
+            AnimatedCheck()
+            VStack(alignment: .leading, spacing: 1) {
+                Text(saved.count == 1 ? (saved.titles.first ?? "") : "Added \(saved.count) items")
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            HStack(spacing: 6) {
-                Button("Undo") { state.undo(saved) }
-                    .buttonStyle(.island)
-                Button(onlyReminders ? "Reminders" : "Calendar") {
-                    onlyReminders ? state.calendar.openRemindersApp() : state.calendar.openCalendarApp()
-                    state.done()
-                }
+            .transition(.opacity.combined(with: .offset(x: -6)))
+            Spacer(minLength: 6)
+            Button("Undo") { state.undo(saved) }
                 .buttonStyle(.island)
-                Spacer()
-                Button("Done", action: state.done)
-                    .buttonStyle(.islandProminent)
-                    .keyboardShortcut(.defaultAction)
+            Button {
+                onlyReminders ? state.calendar.openRemindersApp() : state.calendar.openCalendarApp()
+                state.done()
+            } label: {
+                Image(systemName: "arrow.up.forward.app")
             }
+            .buttonStyle(.island)
+            .help(onlyReminders ? "Open Reminders" : "Open Calendar")
         }
-        .onAppear { appeared = true }
     }
 
     private var subtitle: String {
         let destination = saved.destinations.joined(separator: ", ")
         let sync = saved.syncsWithICloud ? " · syncing to iPhone" : ""
-        guard saved.count == 1, let start = saved.firstStart else { return destination + sync }
+        guard saved.count == 1, let start = saved.firstStart else { return "Added to \(destination)\(sync)" }
         let when = saved.firstIsAllDay
             ? start.formatted(.dateTime.weekday(.abbreviated).month().day())
             : start.formatted(.dateTime.weekday(.abbreviated).month().day().hour().minute())
         return "\(when) · \(destination)\(sync)"
+    }
+}
+
+/// Green disc springs in, then the tick draws itself.
+private struct AnimatedCheck: View {
+    @State private var popped = false
+    @State private var drawn = false
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(.green)
+                .scaleEffect(popped ? 1 : 0.2)
+                .opacity(popped ? 1 : 0)
+            Circle()
+                .stroke(.green.opacity(0.5), lineWidth: 2)
+                .scaleEffect(popped ? 1.6 : 1)
+                .opacity(popped ? 0 : 0.8)
+            CheckShape()
+                .trim(from: 0, to: drawn ? 1 : 0)
+                .stroke(.black, style: StrokeStyle(lineWidth: 2.6, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: 26, height: 26)
+        .onAppear {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.55)) { popped = true }
+            withAnimation(.easeOut(duration: 0.28).delay(0.15)) { drawn = true }
+            NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+        }
+    }
+}
+
+private struct CheckShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX + rect.width * 0.28, y: rect.minY + rect.height * 0.53))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.44, y: rect.minY + rect.height * 0.68))
+        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.73, y: rect.minY + rect.height * 0.36))
+        return path
+    }
+}
+
+/// The primary button's label: icon and title, or a dark spinner while saving (the button is
+/// white, so a default spinner would be invisible), at a steady width.
+struct AddLabel: View {
+    let title: String
+    let symbol: String
+    let isSaving: Bool
+
+    var body: some View {
+        ZStack {
+            Label(title, systemImage: symbol)
+                .opacity(isSaving ? 0 : 1)
+            if isSaving {
+                ProgressView()
+                    .controlSize(.mini)
+                    .tint(.black)
+                    .colorScheme(.light)
+            }
+        }
     }
 }
 

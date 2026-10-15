@@ -77,11 +77,7 @@ struct EventCardView: View {
                     Button {
                         state.save()
                     } label: {
-                        if state.isSaving {
-                            ProgressView().controlSize(.mini)
-                        } else {
-                            Text("Add")
-                        }
+                        AddLabel(title: "Add", symbol: kind == .event ? "calendar.badge.plus" : "plus.circle", isSaving: state.isSaving)
                     }
                     .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)

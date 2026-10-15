@@ -165,6 +165,11 @@ final class AppState {
         let toSave = drafts.count > 1 ? includedDrafts : [draft]
         guard !toSave.isEmpty else { return }
         isSaving = true
+        // macOS shows the Calendar/Reminders permission prompt for the active app; Catchy never
+        // activates itself otherwise, so the first prompt could go unseen and Add looked stuck.
+        if toSave.contains(where: { calendar.access(for: $0.kind) == .notDetermined }) {
+            NSApp.activate()
+        }
         Task {
             defer { isSaving = false }
             // On denial the card and list show a banner pointing at System Settings.
