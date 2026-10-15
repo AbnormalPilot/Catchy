@@ -1,5 +1,6 @@
 import AppKit
 import Observation
+import ServiceManagement
 
 /// Drives the popover: what was caught, what the card shows, and saving it.
 @Observable
@@ -32,6 +33,28 @@ final class AppState {
 
     var showsList: Bool { drafts.count > 1 && selection == nil }
     var includedDrafts: [EventDraft] { drafts.filter(\.isIncluded) }
+
+    // MARK: Preferences that live in the ••• menu (no settings screen, by design)
+
+    /// Stops automatic clipboard catching; the hotkey, Services and buttons still work.
+    var isPaused = UserDefaults.standard.bool(forKey: "pauseCatching") {
+        didSet { UserDefaults.standard.set(isPaused, forKey: "pauseCatching") }
+    }
+
+    var hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
+        didSet { UserDefaults.standard.set(hasSeenWelcome, forKey: "hasSeenWelcome") }
+    }
+
+    var launchesAtLogin = SMAppService.mainApp.status == .enabled {
+        didSet {
+            guard launchesAtLogin != (SMAppService.mainApp.status == .enabled) else { return }
+            do {
+                try launchesAtLogin ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister()
+            } catch {
+                launchesAtLogin = SMAppService.mainApp.status == .enabled
+            }
+        }
+    }
 
     let calendar = CalendarService()
     let extractor = EventExtractor()

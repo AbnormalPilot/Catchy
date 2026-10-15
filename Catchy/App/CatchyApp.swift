@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboard.onEventText = { [weak self] text, source in
             self?.state.catchText(text, from: source)
         }
+        clipboard.isPaused = { [weak self] in self?.state.isPaused ?? false }
         clipboard.start()
 
         hotKey = GlobalHotKey(keyCode: kVK_ANSI_C, modifiers: cmdKey | optionKey) { [weak self] in
@@ -38,5 +39,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSUpdateDynamicServices()
 
         state.prepare()
+
+        if !state.hasSeenWelcome {
+            // The status item needs a moment to land in the menu bar before anything can anchor to it.
+            Task {
+                try? await Task.sleep(for: .milliseconds(800))
+                state.presentPopover()
+            }
+        }
     }
 }

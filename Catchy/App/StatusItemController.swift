@@ -17,6 +17,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
         if let button = statusItem.button {
             button.image = Self.icon(for: state.phase)
+            button.appearsDisabled = state.isPaused
             button.target = self
             button.action = #selector(togglePopover)
         }
@@ -81,6 +82,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     func popoverDidClose(_ notification: Notification) {
         anchorWindow.orderOut(nil)
+        state.hasSeenWelcome = true
         // A finished or failed catch shouldn't greet you next time.
         switch state.phase {
         case .saved, .failed, .nothingFound, .needsScreenAccess: state.reset()
@@ -91,10 +93,12 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func observePhase() {
         withObservationTracking {
             _ = state.phase
+            _ = state.isPaused
         } onChange: { [weak self] in
             Task { @MainActor in
                 guard let self else { return }
                 self.statusItem.button?.image = Self.icon(for: self.state.phase)
+                self.statusItem.button?.appearsDisabled = self.state.isPaused
                 self.observePhase()
             }
         }

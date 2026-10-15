@@ -9,7 +9,7 @@ import AppKit
 final class ClipboardWatcher {
     var onEventText: (String, CaptureSource) -> Void = { _, _ in }
     /// Auto-catching off ("Pause Catching" in the menu). Manual catching still works.
-    var isPaused = false
+    var isPaused: () -> Bool = { false }
 
     private let pasteboard = NSPasteboard.general
     private var lastChangeCount = NSPasteboard.general.changeCount
@@ -34,7 +34,7 @@ final class ClipboardWatcher {
         lastChangeCount = pasteboard.changeCount
 
         let types = Set(pasteboard.types ?? [])
-        guard !isPaused, types.isDisjoint(with: Self.ignoredTypes) else { return }
+        guard !isPaused(), types.isDisjoint(with: Self.ignoredTypes) else { return }
 
         // A picture (a copied screenshot, or a photo copied on the iPhone). Copied files also
         // carry an icon image, so skip anything that is a file.

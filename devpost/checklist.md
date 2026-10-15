@@ -89,7 +89,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Add an event, catch another at the same time and see the clash line; Undo removes the second.
   Commit: `Warn about clashes and allow undo`
 
-- [ ] **9. Welcome, Pause and Launch at Login**
+- [x] **9. Welcome, Pause and Launch at Login**
   Becomes usable: The first launch opens a welcome card; the ••• menu has Pause Catching and Launch at Login.
   Why now: Turns the proof of concept into a coherent product experience (judging: Design).
   PRD ref: `prd.md > Welcome and login`, `prd.md > Clipboard catching`

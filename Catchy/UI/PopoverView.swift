@@ -27,6 +27,9 @@ struct PopoverView: View {
                     .foregroundStyle(.secondary)
             }
             Menu {
+                Toggle("Pause Catching", isOn: $state.isPaused)
+                Toggle("Launch at Login", isOn: $state.launchesAtLogin)
+                Divider()
                 Button("Quit Catchy") { NSApp.terminate(nil) }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -82,10 +85,16 @@ private struct IdleView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Copy any text with a date in it, on this Mac or your iPhone, and Catchy turns it into an event.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if state.hasSeenWelcome {
+                Text(state.isPaused
+                     ? "Catching is paused. Use the buttons below, or turn it back on in the ••• menu."
+                     : "Copy anything with a date in it, on this Mac or your iPhone, and Catchy turns it into an event.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                WelcomeView()
+            }
 
             GlassEffectContainer {
                 VStack(spacing: 8) {
@@ -115,6 +124,37 @@ private struct IdleView: View {
             Label("Runs entirely on this Mac", systemImage: "lock.fill")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+private struct WelcomeView: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Welcome to Catchy")
+                .font(.title3.weight(.semibold))
+            Text("Turn dates you see into calendar events, without retyping.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 8) {
+                step("doc.on.clipboard", "Copy anything with a date", "on this Mac, or on your iPhone")
+                step("viewfinder", "Press ⌥⌘C and drag", "over a flyer, poster or screenshot")
+                step("contextualmenu.and.cursorarrow", "Or right-click selected text", "Services › Catch with Catchy")
+                step("lock", "Everything stays on this Mac", "read by Apple's on-device model")
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func step(_ symbol: String, _ title: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: symbol)
+                .foregroundStyle(.tint)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.callout.weight(.medium))
+                Text(detail).font(.caption).foregroundStyle(.secondary)
+            }
         }
     }
 }
