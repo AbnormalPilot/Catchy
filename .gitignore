@@ -3,3 +3,9 @@ build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
+
+# Devpost Learn: personal learning context stays out of commits
+/devpost/learner-profile.md
+.env
+.env.*
+!.env.example
