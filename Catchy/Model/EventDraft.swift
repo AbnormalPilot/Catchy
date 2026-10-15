@@ -9,6 +9,8 @@ struct EventDraft: Equatable {
     var location: String
     var notes: String
     var url: URL?
+    /// The zone the text was written in, when it isn't this Mac's ("3pm ET"). Times are stored absolute.
+    var sourceTimeZone: TimeZone?
 
     /// A starting point when nothing usable was found: next whole hour, one hour long.
     static func blank(notes: String, now: Date = .now) -> EventDraft {

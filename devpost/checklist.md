@@ -29,7 +29,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Grant Screen Recording, reopen, press ⌥⌘C and drag over a flyer.
   Commit: `Capture a screen region with a hotkey and read it with Vision`
 
-- [ ] **3. Times in other time zones land at the right local time**
+- [x] **3. Times in other time zones land at the right local time**
   Becomes usable: "Thursday, Oct 22 at 3:00 pm ET" becomes a card at the right local time, with a "3:00 PM ET" note.
   Why now: Cheapest high-impact accuracy fix, and it shapes the extractor that slices 4–5 extend.
   PRD ref: `prd.md > Understanding the text`

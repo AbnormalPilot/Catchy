@@ -13,6 +13,7 @@
 		585C9BCF1B153024D1648A17 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9A1C66F86FE44CBCD6609D6C /* Assets.xcassets */; };
 		5B44DA13460DCBA796212AB4 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04428EDFE3DA3194EE09363E /* CalendarService.swift */; };
 		5F9810C615EBD67EEF3B672B /* PopoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111E94F8A421E04C58A8C706 /* PopoverView.swift */; };
+		6730D54FB436803ED3B1ECC0 /* TimeZones.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19BBFE50F4C26664E5274DA5 /* TimeZones.swift */; };
 		67BB82ACEF7FC46FD13460E2 /* CatchyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 260426AB0F64E15FF312892B /* CatchyApp.swift */; };
 		735D9C997D726732C037F95C /* EventDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F786C5255027B6D9B592FEC /* EventDraft.swift */; };
 		8A66DFEBD6900AFFC8D1BCCA /* EventExtractor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68DC415448E7E5626A0D66C0 /* EventExtractor.swift */; };
@@ -26,6 +27,7 @@
 /* Begin PBXFileReference section */
 		04428EDFE3DA3194EE09363E /* CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarService.swift; sourceTree = "<group>"; };
 		111E94F8A421E04C58A8C706 /* PopoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverView.swift; sourceTree = "<group>"; };
+		19BBFE50F4C26664E5274DA5 /* TimeZones.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeZones.swift; sourceTree = "<group>"; };
 		1B95E942F52ADBAFACD19021 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		260426AB0F64E15FF312892B /* CatchyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatchyApp.swift; sourceTree = "<group>"; };
 		2693DDEFD9FE06BEED8B2A50 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -109,6 +111,7 @@
 				68DC415448E7E5626A0D66C0 /* EventExtractor.swift */,
 				C49D6D50EE7282D4024320D1 /* GlobalHotKey.swift */,
 				687A7BB0E7445262CD6F9F81 /* ScreenCapture.swift */,
+				19BBFE50F4C26664E5274DA5 /* TimeZones.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -207,6 +210,7 @@
 				CC180C1A133083FF93875A21 /* RegionSelector.swift in Sources */,
 				DDB1853E482AA0919090F3B9 /* ScreenCapture.swift in Sources */,
 				8EA7DEB95CC003D9DCFF60D0 /* StatusItemController.swift in Sources */,
+				6730D54FB436803ED3B1ECC0 /* TimeZones.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

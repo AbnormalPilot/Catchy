@@ -22,6 +22,12 @@ struct EventCardView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
                 datePicker("Starts", selection: startBinding)
                 datePicker("Ends", selection: $state.draft.end, in: state.draft.start...)
+                if let zone = state.draft.sourceTimeZone, !state.draft.isAllDay {
+                    Label("\(TimeZones.label(state.draft.start, in: zone)) · shown in your time", systemImage: "globe")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
             }
 
             field("mappin.and.ellipse", "Location", text: $state.draft.location)

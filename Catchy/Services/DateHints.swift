@@ -9,6 +9,8 @@ struct DateHints {
         let duration: TimeInterval
         let phrase: String
         let hasTime: Bool
+        /// Set when the text names a zone ("3pm ET"); `date` is already converted to absolute time.
+        let timeZone: TimeZone?
     }
 
     let dates: [DateMatch]
@@ -34,12 +36,14 @@ struct DateHints {
             case .date:
                 guard let date = match.date else { continue }
                 phrases.append(phrase)
-                let found = DateMatch(date: date, duration: match.duration, phrase: phrase, hasTime: Self.mentionsTime(phrase))
+                let found = DateMatch(date: date, duration: match.duration, phrase: phrase,
+                                      hasTime: Self.mentionsTime(phrase), timeZone: match.timeZone)
                 // Flyers split "Sat, Oct 24 • 4pm - 9pm" into a date and a time; join them back up.
                 if let previous = dates.last, !previous.hasTime, found.hasTime, Self.isTimeOnly(phrase),
-                   let merged = Self.combine(day: previous.date, time: date) {
+                   let merged = Self.combine(day: previous.date, time: date, timeZone: found.timeZone) {
                     dates[dates.count - 1] = DateMatch(date: merged, duration: found.duration,
-                                                       phrase: previous.phrase + " " + phrase, hasTime: true)
+                                                       phrase: previous.phrase + " " + phrase, hasTime: true,
+                                                       timeZone: found.timeZone)
                 } else {
                     dates.append(found)
                 }
@@ -62,9 +66,12 @@ struct DateHints {
         guard !dates.isEmpty else { return "" }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        let lines = dates.prefix(6).map { match in
+        let lines = dates.prefix(8).map { match in
+            // Show zoned times in their own zone so they line up with what the text says.
+            formatter.timeZone = match.timeZone ?? .current
             formatter.dateFormat = match.hasTime ? "EEEE yyyy-MM-dd HH:mm" : "EEEE yyyy-MM-dd"
-            return "- \"\(match.phrase)\" = \(formatter.string(from: match.date))"
+            let zone = match.timeZone.map { " (time zone \($0.identifier))" } ?? ""
+            return "- \"\(match.phrase)\" = \(formatter.string(from: match.date))\(zone)"
         }
         return "Date phrases found in the text, already resolved:\n" + lines.joined(separator: "\n")
     }
@@ -82,7 +89,10 @@ struct DateHints {
             isAllDay: !first.hasTime,
             location: address ?? "",
             notes: "",
-            url: url
+            url: url,
+            sourceTimeZone: first.hasTime ? first.timeZone.flatMap {
+                $0.secondsFromGMT(for: start) == TimeZone.current.secondsFromGMT(for: start) ? nil : $0
+            } : nil
         )
     }
 
@@ -97,10 +107,15 @@ struct DateHints {
         return phrase.lowercased().range(of: dayWords, options: .regularExpression) == nil
     }
 
-    private static func combine(day: Date, time: Date) -> Date? {
-        let calendar = Calendar.current
-        let clock = calendar.dateComponents([.hour, .minute], from: time)
-        return calendar.date(bySettingHour: clock.hour ?? 0, minute: clock.minute ?? 0, second: 0, of: day)
+    /// The calendar day of `day` (as written, so local) at the clock time of `time` (in its own zone).
+    private static func combine(day: Date, time: Date, timeZone: TimeZone?) -> Date? {
+        var zoned = Calendar.current
+        zoned.timeZone = timeZone ?? .current
+        let clock = zoned.dateComponents([.hour, .minute], from: time)
+        var parts = Calendar.current.dateComponents([.year, .month, .day], from: day)
+        parts.hour = clock.hour
+        parts.minute = clock.minute
+        return zoned.date(from: parts)
     }
 
     private static func guessTitle(from text: String, skipping phrases: [String]) -> String {

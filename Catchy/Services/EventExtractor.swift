@@ -22,6 +22,9 @@ struct GeneratedEvent {
     @Guide(description: "End time as 24-hour HH:mm, or empty if unknown")
     var endTime: String
 
+    @Guide(description: "The time zone written next to the time, such as ET, PST, GMT+1 or London, or empty if none is written. Times above stay as written in that zone")
+    var timeZone: String
+
     @Guide(description: "Venue name and/or address, or empty")
     var location: String
 
@@ -42,6 +45,7 @@ final class EventExtractor {
         Pick the main event, not side dates such as "RSVP by" or "tickets on sale".
         The title should be short and specific, like "Spring Fling Potluck" or "Dentist with Dr. Patel". Never write it in all caps.
         Resolve relative dates like "tomorrow" or "this Saturday" against today's date from the prompt.
+        Write times exactly as the text gives them, and put any time zone the text names in timeZone. Don't convert.
         If no year is given, use the next upcoming occurrence.
         Leave a field empty when the text does not say it. Never invent details.
         OCR text can have broken lines and typos; read through them.
@@ -111,8 +115,16 @@ final class EventExtractor {
     }
 
     static func draft(from generated: GeneratedEvent, text: String, hints: DateHints, now: Date) -> EventDraft? {
-        let calendar = Calendar.current
-        guard var day = parseDay(generated.startDate) ?? hints.dates.first.map({ calendar.startOfDay(for: $0.date) }) else {
+        // Times are as written; read them in the zone the text names, if any.
+        let hasTime = parseTime(generated.startTime) != nil
+        let writtenZone = TimeZones.resolve(generated.timeZone)
+            ?? hints.dates.first(where: { $0.hasTime && $0.timeZone != nil })?.timeZone
+        let zone = hasTime ? writtenZone : nil
+        var calendar = Calendar.current
+        if let zone { calendar.timeZone = zone }
+
+        guard var day = parseDay(generated.startDate, in: calendar.timeZone)
+                ?? hints.dates.first.map({ calendar.startOfDay(for: $0.date) }) else {
             return nil
         }
         if !generated.containsEvent && hints.dates.isEmpty { return nil }
@@ -129,7 +141,7 @@ final class EventExtractor {
         let start = startTime.flatMap { calendar.date(byAdding: $0, to: day) } ?? day
 
         var end: Date
-        let endDay = parseDay(generated.endDate) ?? day
+        let endDay = parseDay(generated.endDate, in: calendar.timeZone) ?? day
         if let endTime = parseTime(generated.endTime), !isAllDay,
            let candidate = calendar.date(byAdding: endTime, to: endDay) {
             // "10pm – 2am" ends the next morning.
@@ -151,14 +163,15 @@ final class EventExtractor {
             isAllDay: isAllDay,
             location: location.isEmpty ? (hints.address ?? "") : location,
             notes: generated.notes.trimmingCharacters(in: .whitespacesAndNewlines),
-            url: hints.url
+            url: hints.url,
+            sourceTimeZone: zone.flatMap { $0.secondsFromGMT(for: start) == TimeZone.current.secondsFromGMT(for: start) ? nil : $0 }
         )
     }
 
-    private static func parseDay(_ string: String) -> Date? {
+    private static func parseDay(_ string: String, in zone: TimeZone) -> Date? {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = .current
+        formatter.timeZone = zone
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string.trimmingCharacters(in: .whitespaces))
     }
