@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import SwiftUI
 
 @main
@@ -15,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let state = AppState()
     private var statusItem: StatusItemController?
     private let clipboard = ClipboardWatcher()
+    private var hotKey: GlobalHotKey?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = StatusItemController(state: state)
@@ -23,6 +25,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.state.catchText(text, from: .clipboard)
         }
         clipboard.start()
+
+        hotKey = GlobalHotKey(keyCode: kVK_ANSI_C, modifiers: cmdKey | optionKey) { [weak self] in
+            self?.state.captureScreen()
+        }
 
         state.prepare()
     }

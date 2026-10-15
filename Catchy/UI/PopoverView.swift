@@ -16,13 +16,12 @@ struct PopoverView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "calendar.badge.plus")
-                .font(.title3)
+            Image(.menuBarIcon)
                 .foregroundStyle(.tint)
             Text("Catchy")
                 .font(.headline)
             Spacer()
-            if state.phase != .idle {
+            if state.phase != .idle, state.phase != .needsScreenAccess {
                 Label(state.source.rawValue, systemImage: state.source.symbol)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -56,6 +55,8 @@ struct PopoverView: View {
                 primary: ("Create Anyway", state.editManually),
                 secondary: ("Cancel", state.done)
             )
+        case .needsScreenAccess:
+            ScreenAccessView(state: state)
         case .saved(let saved):
             SavedView(saved: saved, state: state)
         case .failed(let message):
@@ -82,18 +83,63 @@ private struct IdleView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Button {
-                state.catchCurrentClipboard()
-            } label: {
-                Label("Catch from Clipboard", systemImage: "doc.on.clipboard")
-                    .frame(maxWidth: .infinity)
+            GlassEffectContainer {
+                VStack(spacing: 8) {
+                    Button {
+                        state.captureScreen()
+                    } label: {
+                        HStack {
+                            Label("Capture Screen", systemImage: "viewfinder")
+                            Spacer()
+                            Text("⌥⌘C").foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glassProminent)
+
+                    Button {
+                        state.catchCurrentClipboard()
+                    } label: {
+                        Label("Catch from Clipboard", systemImage: "doc.on.clipboard")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .buttonStyle(.glass)
+                }
+                .controlSize(.large)
             }
-            .buttonStyle(.glass)
-            .controlSize(.large)
 
             Label("Runs entirely on this Mac", systemImage: "lock.fill")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
+        }
+    }
+}
+
+private struct ScreenAccessView: View {
+    let state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("Allow Screen Recording", systemImage: "rectangle.dashed.badge.record")
+                .font(.headline)
+            Text("To read text from part of your screen, Catchy needs Screen Recording access. It only looks at the area you select, and the image never leaves this Mac.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("1. Click Allow Access, then switch on Catchy.")
+                Text("2. Reopen Catchy so macOS applies the change.")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            HStack {
+                Button("Reopen Catchy", action: ScreenCapturePermission.relaunch)
+                    .buttonStyle(.glass)
+                Spacer()
+                Button("Allow Access", action: state.requestScreenAccess)
+                    .buttonStyle(.glassProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
         }
     }
 }
@@ -105,16 +151,18 @@ private struct ReadingView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Reading…")
+                Text(text.isEmpty ? "Reading your screen…" : "Finding the event…")
                     .font(.callout.weight(.medium))
             }
-            Text(text)
+            if !text.isEmpty {
+                Text(text)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(4)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
                 .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 10))
+            }
         }
     }
 }

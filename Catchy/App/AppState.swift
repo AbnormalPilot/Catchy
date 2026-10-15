@@ -9,6 +9,7 @@ final class AppState {
         case reading
         case review
         case nothingFound
+        case needsScreenAccess
         case saved(SavedEvent)
         case failed(String)
     }
@@ -22,6 +23,7 @@ final class AppState {
 
     let calendar = CalendarService()
     let extractor = EventExtractor()
+    private let regionSelector = RegionSelector()
 
     /// Wired up by the status item controller.
     var presentPopover: () -> Void = {}
@@ -51,6 +53,45 @@ final class AppState {
             return
         }
         catchText(text, from: .clipboard)
+    }
+
+    /// The hotkey flow: drag over part of the screen, OCR it, then extract like copied text.
+    func captureScreen() {
+        guard ScreenCapturePermission.isGranted else {
+            phase = .needsScreenAccess
+            presentPopover()
+            return
+        }
+        work?.cancel()
+        closePopover()
+        work = Task {
+            guard let rect = await regionSelector.selectRegion() else { return }
+            // Let the overlay leave the screen before it gets photographed.
+            try? await Task.sleep(for: .milliseconds(120))
+            source = .screen
+            rawText = ""
+            phase = .reading
+            presentPopover()
+            do {
+                let text = try await ScreenReader.readText(in: rect)
+                guard !Task.isCancelled else { return }
+                guard !text.isEmpty else {
+                    phase = .failed("Catchy couldn't find any text there. Try selecting a larger area.")
+                    return
+                }
+                rawText = text
+                await extract(text)
+            } catch {
+                phase = .failed("Couldn't capture the screen: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func requestScreenAccess() {
+        if !ScreenCapturePermission.request() {
+            // After the first ask, macOS only changes this in System Settings.
+            ScreenCapturePermission.openSettings()
+        }
     }
 
     private func extract(_ text: String) async {

@@ -50,7 +50,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         // A finished or failed catch shouldn't greet you next time.
         switch state.phase {
-        case .saved, .failed, .nothingFound: state.reset()
+        case .saved, .failed, .nothingFound, .needsScreenAccess: state.reset()
         default: break
         }
     }
@@ -68,12 +68,11 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     private static func icon(for phase: AppState.Phase) -> NSImage? {
-        let name = switch phase {
-        case .reading: "sparkles"
-        case .saved: "calendar.badge.checkmark"
-        default: "calendar.badge.plus"
+        let image = switch phase {
+        case .reading: NSImage(systemSymbolName: "sparkles", accessibilityDescription: "Catchy is reading")
+        case .saved: NSImage(systemSymbolName: "checkmark.circle", accessibilityDescription: "Event added")
+        default: NSImage(resource: .menuBarIcon)
         }
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Catchy")
         image?.isTemplate = true
         return image
     }

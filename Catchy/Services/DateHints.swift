@@ -12,17 +12,20 @@ struct DateHints {
     }
 
     let dates: [DateMatch]
+    /// Every date/time phrase exactly as written, for stripping out of a guessed title.
+    let phrases: [String]
     let address: String?
     let url: URL?
 
     init(text: String) {
         let types: NSTextCheckingResult.CheckingType = [.date, .address, .link]
         guard let detector = try? NSDataDetector(types: types.rawValue) else {
-            dates = []; address = nil; url = nil
+            dates = []; phrases = []; address = nil; url = nil
             return
         }
         let range = NSRange(text.startIndex..., in: text)
         var dates: [DateMatch] = []
+        var phrases: [String] = []
         var address: String?
         var url: URL?
         for match in detector.matches(in: text, range: range) {
@@ -30,7 +33,16 @@ struct DateHints {
             switch match.resultType {
             case .date:
                 guard let date = match.date else { continue }
-                dates.append(DateMatch(date: date, duration: match.duration, phrase: phrase, hasTime: Self.mentionsTime(phrase)))
+                phrases.append(phrase)
+                let found = DateMatch(date: date, duration: match.duration, phrase: phrase, hasTime: Self.mentionsTime(phrase))
+                // Flyers split "Sat, Oct 24 • 4pm - 9pm" into a date and a time; join them back up.
+                if let previous = dates.last, !previous.hasTime, found.hasTime, Self.isTimeOnly(phrase),
+                   let merged = Self.combine(day: previous.date, time: date) {
+                    dates[dates.count - 1] = DateMatch(date: merged, duration: found.duration,
+                                                       phrase: previous.phrase + " " + phrase, hasTime: true)
+                } else {
+                    dates.append(found)
+                }
             case .address where address == nil:
                 address = phrase.replacingOccurrences(of: "\n", with: ", ")
             case .link where url == nil:
@@ -40,6 +52,7 @@ struct DateHints {
             }
         }
         self.dates = dates
+        self.phrases = phrases
         self.address = address
         self.url = url
     }
@@ -63,7 +76,7 @@ struct DateHints {
         let start = first.hasTime ? first.date : calendar.startOfDay(for: first.date)
         let end = first.duration > 0 ? start.addingTimeInterval(first.duration) : start.addingTimeInterval(3600)
         return EventDraft(
-            title: Self.guessTitle(from: text, skipping: dates.map(\.phrase)),
+            title: Self.guessTitle(from: text, skipping: phrases),
             start: start,
             end: first.hasTime ? end : start,
             isAllDay: !first.hasTime,
@@ -77,6 +90,17 @@ struct DateHints {
         let lower = phrase.lowercased()
         if lower.contains("noon") || lower.contains("midnight") { return true }
         return lower.range(of: #"\d\s*(:\d{2}|am|pm|a\.m\.|p\.m\.|h\b)"#, options: .regularExpression) != nil
+    }
+
+    private static func isTimeOnly(_ phrase: String) -> Bool {
+        let dayWords = #"(mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|today|tomorrow|tonight|\d+\s*/\s*\d+)"#
+        return phrase.lowercased().range(of: dayWords, options: .regularExpression) == nil
+    }
+
+    private static func combine(day: Date, time: Date) -> Date? {
+        let calendar = Calendar.current
+        let clock = calendar.dateComponents([.hour, .minute], from: time)
+        return calendar.date(bySettingHour: clock.hour ?? 0, minute: clock.minute ?? 0, second: 0, of: day)
     }
 
     private static func guessTitle(from text: String, skipping phrases: [String]) -> String {
