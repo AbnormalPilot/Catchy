@@ -173,11 +173,13 @@ private struct CompactIsland: View {
                 .resizable()
                 .frame(width: 14, height: 14)
                 .foregroundStyle(.white)
-            Spacer(minLength: notch.width)
+            // Clear of the camera housing's rounded corners, so nothing looks cut.
+            Spacer(minLength: notch.width + 28)
             trailing
         }
         .padding(.horizontal, 12 + IslandView.ear)
-        .frame(height: notch.height)
+        // A little taller than the notch, so the pill's rounded bottom shows below it.
+        .frame(height: notch.height + 8)
     }
 
     @ViewBuilder
@@ -240,6 +242,14 @@ final class IslandController {
     private var pendingShrink: DispatchWorkItem?
     private var pendingOrderOut: DispatchWorkItem?
 
+    // Hovering the notch opens the island; leaving closes it again unless you clicked inside.
+    private var hoverTimer: Timer?
+    private var hoverStarted: Date?
+    private var leftAt: Date?
+    private var openedByHover = false
+    private var pinned = false
+    private var insideClicks: Any?
+
     /// Open as the full card (compact counts as closed, so the menu bar icon expands it).
     var isShown: Bool { model.mode == .expanded }
     /// Called after the island has fully closed (for resetting finished catches).
@@ -257,6 +267,16 @@ final class IslandController {
         panel.contentView = hosting
         panel.onEscape = { [weak self] in self?.hide() }
 
+        hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.trackHover() }
+        }
+        insideClicks = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
+            MainActor.assumeIsolated {
+                if let self, event.window === self.panel { self.pinned = true }
+            }
+            return event
+        }
+
         // Switching apps while a card is open tucks it into the notch instead of dropping it.
         appSwitches = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
@@ -269,10 +289,14 @@ final class IslandController {
         }
     }
 
-    func show() {
+    func show(byHover: Bool = false) {
+        openedByHover = byHover
+        pinned = false
+        leftAt = nil
         pendingOrderOut?.cancel()
         if model.mode == .hidden {
             screen = Self.targetScreen()
+            // Start from the notch-sized frame, so a hover-open grows out of the notch.
             model.notch = Self.notchSize(on: screen)
             panel.setFrame(frame(for: size), display: false)
         }
@@ -285,6 +309,7 @@ final class IslandController {
     /// Back into the notch. A card that's still waiting stays as a compact pill.
     func collapse() {
         guard model.mode == .expanded else { return }
+        openedByHover = false
         if state.phase == .review {
             model.mode = .compact
             watchOutsideClicks(false)
@@ -309,6 +334,47 @@ final class IslandController {
 
     func toggle() {
         model.mode == .expanded ? collapse() : show()
+    }
+
+    private func trackHover() {
+        let mouse = NSEvent.mouseLocation
+        switch model.mode {
+        case .hidden, .compact:
+            // Brief dwell, no buttons held (not while dragging), and never mid-read.
+            guard NSEvent.pressedMouseButtons == 0, state.phase != .reading, hoverZone().contains(mouse) else {
+                hoverStarted = nil
+                return
+            }
+            if let started = hoverStarted {
+                if Date.now.timeIntervalSince(started) > 0.15 {
+                    hoverStarted = nil
+                    state.calendar.refreshAccess()
+                    show(byHover: true)
+                }
+            } else {
+                hoverStarted = .now
+            }
+        case .expanded:
+            guard openedByHover, !pinned else { return }
+            if panel.frame.insetBy(dx: -12, dy: -12).contains(mouse) {
+                leftAt = nil
+            } else if let leftAt {
+                if Date.now.timeIntervalSince(leftAt) > 0.3 { collapse() }
+            } else {
+                leftAt = .now
+            }
+        }
+    }
+
+    /// The notch itself (or the pill, when one is showing); a thin strip at the top centre without a notch.
+    private func hoverZone() -> NSRect {
+        if model.mode == .compact { return panel.frame }
+        guard let screen = Self.targetScreen() else { return .zero }
+        let notch = Self.notchSize(on: screen)
+        let hasNotch = screen.safeAreaInsets.top > 0
+        let height = hasNotch ? notch.height : 4
+        return NSRect(x: Self.notchCenterX(on: screen) - notch.width / 2, y: screen.frame.maxY - height,
+                      width: notch.width, height: height)
     }
 
     private func watchOutsideClicks(_ on: Bool) {

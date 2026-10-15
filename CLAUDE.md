@@ -120,3 +120,9 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   switch or outside click a pending card collapses to a compact pill (click to reopen) instead of closing;
   `.environment(\.controlActiveState, .key)` stops controls flashing grey when focus leaves.
 - `.datePickerStyle(.field)` drops the stepper arrows; much tighter than `.compact` on macOS.
+- The compact pill must be taller than the notch (+8) with icons ≥14 pt clear of it, or the camera
+  housing's rounded corners make it look cut (user feedback).
+- Hover the notch → the island opens (0.15 s dwell, no buttons held, not while reading); leaving closes it
+  unless you clicked/typed inside (`pinned`). Tracking polls `NSEvent.mouseLocation` every 80 ms; global
+  mouse-moved monitors miss events over our own panel. Test it by warping the cursor with
+  `CGWarpMouseCursorPosition` and posting a mouseMoved, then restoring the position.
