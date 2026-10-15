@@ -70,6 +70,9 @@ struct IslandView: View {
         ZStack(alignment: .top) {
             NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius)
                 .fill(.black)
+                // The window never leaves the screen; once tucked into the notch the shape vanishes.
+                .opacity(isOpen ? 1 : 0)
+                .animation(isOpen ? nil : .easeOut(duration: 0.12).delay(0.3), value: isOpen)
 
             content
                 .fixedSize()
@@ -223,7 +226,8 @@ final class IslandController {
     private var outsideClicks: Any?
     private var appSwitches: Any?
     private var insideClicks: Any?
-    private var pendingOrderOut: DispatchWorkItem?
+    private var pendingClose: DispatchWorkItem?
+    private var spaceChanges: Any?
 
     // Hovering the notch opens the island; leaving closes it again unless you clicked inside.
     // Driven by mouse-moved events (instant), with a slow timer as a safety net.
@@ -245,7 +249,7 @@ final class IslandController {
         })
         hosting.sizingOptions = []
         panel.contentView = hosting
-        panel.onEscape = { [weak self] in self?.hide() }
+        panel.onEscape = { [weak self] in self?.hide(reason: "escape") }
 
         // Mouse-moved events need no permission. Global covers other apps (full-screen ones
         // included); local covers the pointer over our own panel.
@@ -265,6 +269,19 @@ final class IslandController {
             }
             return event
         }
+        // The window stays up for good (transparent and click-through while closed). Taking it off
+        // screen and back is what lost it on other apps' full-screen spaces (VS Code, Chrome).
+        screen = Self.targetScreen()
+        model.notch = Self.notchSize(on: screen)
+        panel.setFrame(canvasFrame(), display: false)
+        panel.ignoresMouseEvents = true
+        panel.orderFrontRegardless()
+        spaceChanges = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.panel.orderFrontRegardless() }
+        }
+
         // Switching apps tucks the island away; a waiting card comes back on hover.
         appSwitches = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
@@ -273,7 +290,7 @@ final class IslandController {
             MainActor.assumeIsolated {
                 guard app?.processIdentifier != ProcessInfo.processInfo.processIdentifier,
                       self?.state.phase != .reading else { return }
-                self?.hide()
+                self?.hide(reason: "app switch to \(app?.localizedName ?? "?")")
             }
         }
     }
@@ -283,31 +300,37 @@ final class IslandController {
         pinned = false
         pendingLeave?.cancel()
         pendingHoverOpen?.cancel()
-        pendingOrderOut?.cancel()
-        if model.mode == .hidden, !panel.isVisible {
-            screen = Self.targetScreen()
-            model.notch = Self.notchSize(on: screen)
+        pendingClose?.cancel()
+        // Follow the pointer to another display.
+        if model.mode == .hidden, let target = Self.targetScreen(), target != screen {
+            screen = target
+            model.notch = Self.notchSize(on: target)
             panel.setFrame(canvasFrame(), display: false)
         }
         panel.orderFrontRegardless()
-        panel.makeKey()
+        // A hover only peeks; focus moves to the island once you click in it.
+        if !byHover { panel.makeKey() }
         model.mode = .expanded
         watchOutsideClicks(true)
     }
 
-    func hide() {
+    func hide(reason: String = "other") {
         guard model.mode != .hidden else { return }
         model.mode = .hidden
         openedByHover = false
         watchOutsideClicks(false)
-        // Let it shrink back into the notch before the window goes.
-        let orderOut = DispatchWorkItem { [weak self] in
+        panel.ignoresMouseEvents = true
+        // The window stays up, so hand keyboard focus back to the app you were using.
+        if panel.isKeyWindow, let app = NSWorkspace.shared.frontmostApplication,
+           app.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            app.activate()
+        }
+        let close = DispatchWorkItem { [weak self] in
             guard let self, self.model.mode == .hidden else { return }
-            self.panel.orderOut(nil)
             self.onClose()
         }
-        pendingOrderOut = orderOut
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: orderOut)
+        pendingClose = close
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45, execute: close)
     }
 
     func toggle() {
@@ -317,10 +340,8 @@ final class IslandController {
     /// On every mouse move: hover-to-open, leave-to-close, and click-through outside the black shape.
     private func track() {
         let mouse = NSEvent.mouseLocation
-        if panel.isVisible {
-            // Only the black shape takes clicks; the rest of the canvas passes them through.
-            panel.ignoresMouseEvents = !(model.mode == .expanded && shapeRect().contains(mouse))
-        }
+        // Only the black shape takes clicks; the rest of the canvas (and all of it while closed) passes them through.
+        panel.ignoresMouseEvents = !(model.mode == .expanded && shapeRect().contains(mouse))
 
         switch model.mode {
         case .hidden:
@@ -351,7 +372,7 @@ final class IslandController {
                     self.pendingLeave = nil
                     guard self.openedByHover, !self.pinned,
                           !self.shapeRect().insetBy(dx: -14, dy: -14).contains(NSEvent.mouseLocation) else { return }
-                    self.hide()
+                    self.hide(reason: "pointer left")
                 }
                 pendingLeave = leave
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: leave)
@@ -365,7 +386,7 @@ final class IslandController {
                 MainActor.assumeIsolated {
                     // Reading shows the compact island; a stray click shouldn't cancel it.
                     guard let self, self.state.phase != .reading else { return }
-                    self.hide()
+                    self.hide(reason: "outside click")
                 }
             }
         } else if !on, let monitor = outsideClicks {

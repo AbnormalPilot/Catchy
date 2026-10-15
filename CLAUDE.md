@@ -131,7 +131,14 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   needed; global misses the pointer over our own panel, local covers it) with a 0.25 s timer as backup.
   Polling every 50–80 ms plus a 0.12 s dwell felt laggy (user: "there is some delay"). Measured: fully
   open within 0.2 s on the desktop and over a full-screen app.
-- Full-screen apps: the island does open over them (`.canJoinAllSpaces` + `.fullScreenAuxiliary`, level
-  mainMenu+3). Verified with a throwaway full-screen window: `swiftc` a tiny app that calls `toggleFullScreen`,
-  warps the cursor to the notch and screenshots. Test it by warping the cursor with
+- Full-screen apps (VS Code, Chrome): NEVER `orderOut` the island panel. Re-ordering it in while another
+  app's full-screen space is active left it undrawn, even though `isVisible`/`isOnActiveSpace` said true. Its
+  size never updated, so "pointer left" closed it in a loop. The panel is ordered front once at launch and
+  stays up: transparent and `ignoresMouseEvents` while closed, re-fronted on `activeSpaceDidChange`. A
+  throwaway full-screen test window did NOT reproduce this; test in the real app (`open -a "Visual Studio
+  Code"`, then warp the cursor).
+- Because the window stays up, closing must hand keyboard focus back (`frontmostApplication.activate()`
+  if the panel is key). Hover-opens don't take focus until you click in.
+- When debugging the island, NSLog with a unique prefix and run the binary directly
+  (`Catchy.app/Contents/MacOS/Catchy > log 2>&1 &`); remove the logs before committing. Test it by warping the cursor with
   `CGWarpMouseCursorPosition` and posting a mouseMoved, then restoring the position.
