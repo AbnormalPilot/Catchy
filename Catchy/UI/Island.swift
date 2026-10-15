@@ -58,7 +58,7 @@ struct IslandView: View {
 
     static let ear: CGFloat = 8
     /// One interruptible spring for the shape, so a quick re-open retargets instead of restarting.
-    static let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
+    static let spring = Animation.spring(response: 0.36, dampingFraction: 0.8)
 
     private var isOpen: Bool { island.mode == .expanded }
     private var showsCompact: Bool { state.phase == .reading }
@@ -79,7 +79,7 @@ struct IslandView: View {
                 // Content arrives just after the shape starts to grow, and leaves first.
                 .opacity(isOpen ? 1 : 0)
                 .scaleEffect(isOpen ? 1 : 0.96, anchor: .top)
-                .animation(isOpen ? .easeOut(duration: 0.2).delay(0.07) : .easeIn(duration: 0.1), value: isOpen)
+                .animation(isOpen ? .easeOut(duration: 0.18).delay(0.03) : .easeIn(duration: 0.08), value: isOpen)
         }
         .frame(width: shapeSize.width, height: shapeSize.height, alignment: .top)
         .clipShape(NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius))
@@ -197,6 +197,7 @@ final class IslandPanel: NSPanel {
         hidesOnDeactivate = false
         isReleasedWhenClosed = false
         animationBehavior = .none
+        acceptsMouseMovedEvents = true
         // Above the menu bar, so it can sit in the notch.
         level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
@@ -225,9 +226,11 @@ final class IslandController {
     private var pendingOrderOut: DispatchWorkItem?
 
     // Hovering the notch opens the island; leaving closes it again unless you clicked inside.
+    // Driven by mouse-moved events (instant), with a slow timer as a safety net.
+    private var mouseMoves: [Any] = []
     private var tracker: Timer?
-    private var hoverStarted: Date?
-    private var leftAt: Date?
+    private var pendingHoverOpen: DispatchWorkItem?
+    private var pendingLeave: DispatchWorkItem?
     private var openedByHover = false
     private var pinned = false
 
@@ -244,7 +247,16 @@ final class IslandController {
         panel.contentView = hosting
         panel.onEscape = { [weak self] in self?.hide() }
 
-        tracker = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        // Mouse-moved events need no permission. Global covers other apps (full-screen ones
+        // included); local covers the pointer over our own panel.
+        mouseMoves.append(NSEvent.addGlobalMonitorForEvents(matching: .mouseMoved) { [weak self] _ in
+            MainActor.assumeIsolated { self?.track() }
+        } as Any)
+        mouseMoves.append(NSEvent.addLocalMonitorForEvents(matching: .mouseMoved) { [weak self] event in
+            MainActor.assumeIsolated { self?.track() }
+            return event
+        } as Any)
+        tracker = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.track() }
         }
         insideClicks = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
@@ -269,7 +281,8 @@ final class IslandController {
     func show(byHover: Bool = false) {
         openedByHover = byHover
         pinned = false
-        leftAt = nil
+        pendingLeave?.cancel()
+        pendingHoverOpen?.cancel()
         pendingOrderOut?.cancel()
         if model.mode == .hidden, !panel.isVisible {
             screen = Self.targetScreen()
@@ -301,7 +314,7 @@ final class IslandController {
         model.mode == .expanded ? hide() : show()
     }
 
-    /// Runs every 50 ms: hover-to-open, leave-to-close, and click-through outside the black shape.
+    /// On every mouse move: hover-to-open, leave-to-close, and click-through outside the black shape.
     private func track() {
         let mouse = NSEvent.mouseLocation
         if panel.isVisible {
@@ -311,28 +324,37 @@ final class IslandController {
 
         switch model.mode {
         case .hidden:
-            // Brief dwell, no buttons held (not while dragging).
+            // A short dwell so passing through doesn't open it; never while dragging.
             guard NSEvent.pressedMouseButtons == 0, notchRect().contains(mouse) else {
-                hoverStarted = nil
+                pendingHoverOpen?.cancel()
+                pendingHoverOpen = nil
                 return
             }
-            if let started = hoverStarted {
-                if Date.now.timeIntervalSince(started) > 0.12 {
-                    hoverStarted = nil
-                    state.calendar.refreshAccess()
-                    show(byHover: true)
-                }
-            } else {
-                hoverStarted = .now
+            guard pendingHoverOpen == nil else { return }
+            let open = DispatchWorkItem { [weak self] in
+                guard let self else { return }
+                self.pendingHoverOpen = nil
+                guard self.model.mode == .hidden, self.notchRect().contains(NSEvent.mouseLocation) else { return }
+                self.state.calendar.refreshAccess()
+                self.show(byHover: true)
             }
+            pendingHoverOpen = open
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: open)
         case .expanded:
             guard openedByHover, !pinned, state.phase != .reading else { return }
             if shapeRect().insetBy(dx: -14, dy: -14).contains(mouse) {
-                leftAt = nil
-            } else if let leftAt {
-                if Date.now.timeIntervalSince(leftAt) > 0.3 { hide() }
-            } else {
-                leftAt = .now
+                pendingLeave?.cancel()
+                pendingLeave = nil
+            } else if pendingLeave == nil {
+                let leave = DispatchWorkItem { [weak self] in
+                    guard let self else { return }
+                    self.pendingLeave = nil
+                    guard self.openedByHover, !self.pinned,
+                          !self.shapeRect().insetBy(dx: -14, dy: -14).contains(NSEvent.mouseLocation) else { return }
+                    self.hide()
+                }
+                pendingLeave = leave
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.25, execute: leave)
             }
         }
     }

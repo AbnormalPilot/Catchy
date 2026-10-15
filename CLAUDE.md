@@ -126,7 +126,12 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   black shape springs. Resizing the window mid-spring caused the stutter. Clicks pass through everything
   but the shape via `panel.ignoresMouseEvents`, updated by the 50 ms tracker. Content fades in 70 ms
   after the shape starts growing.
-- Hover the notch → the island opens (0.15 s dwell, no buttons held, not while reading); leaving closes it
-  unless you clicked/typed inside (`pinned`). Tracking polls `NSEvent.mouseLocation` every 80 ms; global
-  mouse-moved monitors miss events over our own panel. Test it by warping the cursor with
+- Hover the notch → the island opens (50 ms dwell, no buttons held); leaving closes it after 0.25 s unless
+  you clicked/typed inside (`pinned`). Driven by global + local `.mouseMoved` monitors (no permission
+  needed; global misses the pointer over our own panel, local covers it) with a 0.25 s timer as backup.
+  Polling every 50–80 ms plus a 0.12 s dwell felt laggy (user: "there is some delay"). Measured: fully
+  open within 0.2 s on the desktop and over a full-screen app.
+- Full-screen apps: the island does open over them (`.canJoinAllSpaces` + `.fullScreenAuxiliary`, level
+  mainMenu+3). Verified with a throwaway full-screen window: `swiftc` a tiny app that calls `toggleFullScreen`,
+  warps the cursor to the notch and screenshots. Test it by warping the cursor with
   `CGWarpMouseCursorPosition` and posting a mouseMoved, then restoring the position.
