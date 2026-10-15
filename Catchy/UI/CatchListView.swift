@@ -28,7 +28,7 @@ struct CatchListView: View {
 
             HStack {
                 Button("Discard", action: state.done)
-                    .buttonStyle(.glass)
+                    .buttonStyle(.island)
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button {
@@ -40,7 +40,7 @@ struct CatchListView: View {
                         Label(saveTitle, systemImage: "plus")
                     }
                 }
-                .buttonStyle(.glassProminent)
+                .buttonStyle(.islandProminent)
                 .keyboardShortcut(.defaultAction)
                 .disabled(included.isEmpty || !deniedKinds.isEmpty)
             }

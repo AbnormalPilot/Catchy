@@ -19,16 +19,16 @@ What's distinctive versus the Calendar app's own date detection or a chatbot: th
 
 ## The Core Loop
 1. See a date somewhere: a flyer, a WhatsApp message, an email, a webinar page, a photo of a poster on your iPhone.
-2. Copy it, or press ⌥⌘C and drag over it.
-3. A small popover under the menu bar icon shows the card, already filled in.
+2. Copy it, or tap ⌥⌘ and drag over it.
+3. A black island grows out of the notch, like the Dynamic Island, showing the card already filled in.
 4. Check it, click **Add to Calendar**, and move on.
 
 They come back because it costs one copy and one click, every time.
 
 ## Inspiration & Identity
-- Native and calm. It should feel like part of macOS: a Liquid Glass popover and a menu bar icon (learner's brief).
+- Native and calm. It should feel like part of macOS (learner's brief). Later the learner asked for the card to live in the notch, "like dynamic island", "pitch black" and "felt like macos internal system", replacing the Liquid Glass popover.
 - A minimal logo (learner: "have a minimistic logo"): a "C" arc catching a coral dot.
-- Hotkey ⌥⌘C (learner's choice). The popover appears under the menu bar icon (learner's correction).
+- Hotkey: tap ⌥⌘, no letter key (learner's choice, changed from ⌥⌘C).
 
 ## Why This Matters to the Learner
 They see dates, plans and tasks everywhere and keep retyping them. It's also their hackathon entry, and they want it broad and usable.
@@ -40,7 +40,7 @@ The "oh, that's cool" beat: copy a webinar time written in ET and see it land at
 
 ## The POC Boundary
 - **Copy → card → Calendar**, including text copied on the iPhone (Universal Clipboard). *(Layer 1, learner)*
-- **⌥⌘C → drag a region → Vision reads it → same card.** *(Layer 2, learner)*
+- **Tap ⌥⌘ → drag a region → Vision reads it → same card.** *(Layer 2, learner)*
 - **Tasks go to Reminders** instead of Calendar. *(Layer 3, learner: "only if time allows")*
 - Breadth, all *(agent recommendations, accepted)*:
   - copied **images**, including iPhone photos, are read too

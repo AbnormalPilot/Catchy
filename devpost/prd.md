@@ -8,23 +8,23 @@ status: draft
 A Mac menu bar app for people who keep retyping dates from flyers, messages and emails. It turns what they copy or capture into a ready-to-save calendar event or reminder, on-device.
 Source: `scope.md > The Unique Kernel`, `scope.md > Who It's For`.
 
-> Sources: the learner's opening brief, their later decisions in session (⌥⌘C, minimal logo, popover under the icon), and agent recommendations they accepted with "do the needful autonomously" (marked *rec.*).
+> Sources: the learner's opening brief, their later decisions in session (⌥⌘ tap, minimal logo, black notch island), and agent recommendations they accepted with "do the needful autonomously" (marked *rec.*).
 
 ## The Core Journey
-1. **First launch:** a "C" logo appears in the menu bar and a welcome card opens under it. It explains the two ways to catch (copy, or ⌥⌘C) and that everything stays on the Mac. *(rec.)*
+1. **First launch:** a "C" logo appears in the menu bar and a welcome card opens under it. It explains the ways to catch (copy, or tap ⌥⌘) and that everything stays on the Mac. *(rec.)*
 2. **Catch:**
    - copy text that contains a date, on the Mac or on the iPhone; or
    - copy an image or photo (including from the iPhone); or
-   - press ⌥⌘C and drag over part of the screen; or
+   - tap ⌥⌘ and drag over part of the screen; or
    - select text in any app and choose **Catch with Catchy** from the right-click Services menu. *(rec.)*
-3. The popover opens under the menu bar icon showing "Reading…", then a pre-filled card: title, date, start and end, all-day, location, notes, and the calendar to save into.
+3. A compact black island appears in the notch while Catchy reads (logo and spinner), then grows into a pre-filled card: title, date, start and end, all-day, location, notes, and the calendar to save into.
 4. The user fixes anything wrong and clicks **Add to Calendar** (or **Add to Reminders** for a task). The first save shows the system permission prompt.
 5. A confirmation shows the title, the time, and "syncing to iPhone and Watch" when the calendar is in iCloud, with **Undo**. *(rec.)*
 6. The event appears on the user's iPhone. Success.
 
 ## Screens and Layout
-One surface: a popover, about 340 pt wide, under the menu bar icon. It always opens under the icon, even when the menu bar auto-hides (learner). Its states:
-- **Welcome / idle:** what Catchy does, plus **Capture Screen ⌥⌘C** and **Catch from Clipboard** buttons.
+One surface: a pitch-black island, about 400 pt wide, that grows out of the notch like the Dynamic Island (learner). On a Mac without a notch it grows from the top centre of the screen. A click outside or Esc closes it; the menu bar icon toggles it. Its states:
+- **Welcome / idle:** what Catchy does, plus **Capture Screen** and **Catch from Clipboard** buttons, and a **Turn on the ⌥⌘ shortcut** row until Input Monitoring is allowed.
 - **Reading:** a spinner and a snippet of the text being read.
 - **Card:** one event or task. Or a **list** of several, each with a checkbox. *(rec.)*
 - **Saved:** a checkmark, a summary, Undo, and Open Calendar.
@@ -34,7 +34,7 @@ One surface: a popover, about 340 pt wide, under the menu bar icon. It always op
 - **••• menu:** Pause Catching, Launch at Login, Quit. These are not a settings screen (settings screens are cut). *(rec.)*
 
 ## Look and Feel
-- Native macOS 26: a Liquid Glass popover, glass buttons, system font, SF Symbols. Nothing should look like a web app. (learner: "The UI should feel native, with a Liquid Glass popover and a menu bar icon.")
+- Pitch black, like system UI in the notch (learner: "pitch black and it should be felt like macos internal system"). White capsule primary buttons, translucent capsule secondary buttons, system font, SF Symbols. Nothing should look like a web app. Replaces the original Liquid Glass popover.
 - Logo: a minimal white "C" arc catching a coral dot on a dark rounded square. The menu bar shows the same mark in monochrome (learner: "minimistic logo").
 - The tone of the copy is short, friendly and plain, e.g. "Reading your screen…", "No date found".
 
@@ -52,8 +52,9 @@ One surface: a popover, about 340 pt wide, under the menu bar icon. It always op
   - [ ] Copying a photo of a flyer opens a card with its date.
 
 ### Screen capture
-- ⌥⌘C dims every screen. Dragging selects an area, and Esc or a plain click cancels. The selected area is read, and the card opens.
-- If Screen Recording access is missing, the popover explains why it's needed, offers **Allow Access**, and then **Reopen Catchy** (macOS only applies the grant after a relaunch).
+- Tapping ⌥⌘ (pressed together and released, with nothing else in between) dims every screen. Dragging selects an area, and Esc or a plain click cancels. The selected area is read, and the card opens.
+- If Input Monitoring is missing, the island offers **Turn On** for the shortcut; the Capture Screen button works without it.
+- If Screen Recording access is missing, the island explains why it's needed, offers **Allow Access**, and then **Reopen Catchy** (macOS only applies the grant after a relaunch).
   - [ ] Dragging over a flyer on screen produces a card with its date and title.
 
 ### Services menu *(rec.)*
@@ -79,7 +80,7 @@ One surface: a popover, about 340 pt wide, under the menu bar icon. It always op
 - A task card has a title, a due date, notes and a reminders list, and the button reads **Add to Reminders**.
 
 ### Several at once *(rec.)*
-- When more than one event is found, the popover lists them (title and time), all checked by default. The button reads **Add 3 Events**. Clicking a row opens it for editing.
+- When more than one event is found, the island lists them (title and time), all checked by default. The button reads **Add 3 Events**. Clicking a row opens it for editing.
   - [ ] A pasted 3-line schedule produces a list of 3 that saves 3 events.
 
 ### Saving and Undo
@@ -89,7 +90,7 @@ One surface: a popover, about 340 pt wide, under the menu bar icon. It always op
   - [ ] Undo removes it from Calendar.
 
 ### Welcome and login *(rec.)*
-- On first launch, the popover opens by itself with the welcome card.
+- On first launch, the island opens by itself with the welcome card.
 - **Launch at Login** in the ••• menu.
 
 ## States and Boundaries
@@ -102,8 +103,8 @@ One surface: a popover, about 340 pt wide, under the menu bar icon. It always op
 
 ## Product Decisions
 - Menu bar only, with no window or Dock icon (learner's brief).
-- Hotkey ⌥⌘C (learner). It overrides Finder's "Copy as Pathname" while Catchy runs.
-- The popover always appears under the icon (learner).
+- Hotkey: a bare ⌥⌘ tap (learner; changed from ⌥⌘C). Needs Input Monitoring.
+- The card lives in a black notch island instead of a popover (learner).
 - On-device only (learner's brief).
 - Breadth over depth for the hackathon: the *rec.* items above (learner: "increase the horizontal of the features"; accepted with "do the needful autonomously").
 

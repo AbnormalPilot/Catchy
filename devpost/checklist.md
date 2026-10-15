@@ -109,6 +109,16 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Read the README as a stranger would.
   Commit: `Add README, license and demo script`
 
+- [x] **11. Notch island and ⌥⌘ tap**
+  Becomes usable: The card grows out of the notch as a pitch-black island; tapping ⌥⌘ starts a screen capture.
+  Why now: Learner feedback on the build: "dynamic island instead of that popup… pitch black… like macos internal system", and "remove c from hotkey".
+  PRD ref: `prd.md > Screens and Layout`, `prd.md > Look and Feel`, `prd.md > Screen capture`
+  Spec ref: `spec.md > IslandController + IslandPanel + IslandView`, `spec.md > ModifierTapHotKey + RegionSelector + ScreenReader`
+  Build: Island panel/shape/view replacing the popover; capsule button styles; event-tap hotkey with Input Monitoring row.
+  Verify (mechanical): Build; copying event text grows the island from the notch (screenshot); welcome shows the Turn On row.
+  Learner check: Turn on Input Monitoring, tap ⌥⌘, drag over a flyer.
+  Commit: `Move the card into a notch island and make the shortcut a ⌥⌘ tap`
+
 ## Hands-on Checkpoints
 
 - [ ] Early feedback after slice 4: the learner grants Calendar access, turns on Apple Intelligence, and tries a real flyer end to end.
@@ -127,3 +137,4 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
 - Slices 1–2 were built before the Skill Pack was installed (2026-10-15). The planning docs were written afterwards from the learner's brief, so these two are recorded as done.
 - Slices 3–10 are built ahead of the learner's approval of the docs, at their request ("do the needful autonomously"). The docs stay `draft` until they review them.
 - Slices 4, 5 and 8 landed in one commit: the extractor and the save path moved to a list of events/tasks together, and Undo/clash sat on the same EventKit code. The clash line and Undo need Calendar access to verify live; that's in the early hands-on checkpoint.
+- Learner feedback after the build (2026-10-15): the popover became a black notch island and the hotkey a bare ⌥⌘ tap (slice 11). Scope, PRD and spec were updated in those sections only.

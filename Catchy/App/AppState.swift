@@ -41,6 +41,9 @@ final class AppState {
         didSet { UserDefaults.standard.set(isPaused, forKey: "pauseCatching") }
     }
 
+    /// The ⌥⌘ tap needs Input Monitoring; until then the island offers to turn it on.
+    var shortcutIsActive = false
+
     var hasSeenWelcome = UserDefaults.standard.bool(forKey: "hasSeenWelcome") {
         didSet { UserDefaults.standard.set(hasSeenWelcome, forKey: "hasSeenWelcome") }
     }
@@ -61,8 +64,8 @@ final class AppState {
     private let regionSelector = RegionSelector()
 
     /// Wired up by the status item controller.
-    var presentPopover: () -> Void = {}
-    var closePopover: () -> Void = {}
+    var showIsland: () -> Void = {}
+    var hideIsland: () -> Void = {}
 
     private var work: Task<Void, Never>?
 
@@ -77,7 +80,7 @@ final class AppState {
         self.source = source
         rawText = text
         phase = .reading
-        presentPopover()
+        showIsland()
         work = Task { await extract(text) }
     }
 
@@ -94,11 +97,11 @@ final class AppState {
     func captureScreen() {
         guard ScreenCapturePermission.isGranted else {
             phase = .needsScreenAccess
-            presentPopover()
+            showIsland()
             return
         }
         work?.cancel()
-        closePopover()
+        hideIsland()
         work = Task {
             guard let rect = await regionSelector.selectRegion() else { return }
             // Let the overlay leave the screen before it gets photographed.
@@ -106,7 +109,7 @@ final class AppState {
             source = .screen
             rawText = ""
             phase = .reading
-            presentPopover()
+            showIsland()
             do {
                 let text = try await ScreenReader.readText(in: rect)
                 guard !Task.isCancelled else { return }
@@ -190,7 +193,7 @@ final class AppState {
     }
 
     func done() {
-        closePopover()
+        hideIsland()
         reset()
     }
 }

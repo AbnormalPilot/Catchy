@@ -1,4 +1,3 @@
-import Carbon.HIToolbox
 import SwiftUI
 
 @main
@@ -16,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let state = AppState()
     private var statusItem: StatusItemController?
     private let clipboard = ClipboardWatcher()
-    private var hotKey: GlobalHotKey?
+    private var hotKey: ModifierTapHotKey?
     private let services = ServiceProvider()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -28,9 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboard.isPaused = { [weak self] in self?.state.isPaused ?? false }
         clipboard.start()
 
-        hotKey = GlobalHotKey(keyCode: kVK_ANSI_C, modifiers: cmdKey | optionKey) { [weak self] in
-            self?.state.captureScreen()
-        }
+        let hotKey = ModifierTapHotKey { [weak self] in self?.state.captureScreen() }
+        hotKey.onStatusChange = { [weak self] active in self?.state.shortcutIsActive = active }
+        hotKey.start()
+        self.hotKey = hotKey
 
         services.onText = { [weak self] text in
             self?.state.catchText(text, from: .service)
@@ -44,7 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // The status item needs a moment to land in the menu bar before anything can anchor to it.
             Task {
                 try? await Task.sleep(for: .milliseconds(800))
-                state.presentPopover()
+                state.showIsland()
             }
         }
     }

@@ -9,7 +9,7 @@ A macOS menu bar app that turns dates you copy or capture into calendar events a
 
 ---
 
-You see dates everywhere: on flyers, in group chats, in emails, on webinar pages. Getting them into a calendar means retyping them. Catchy watches for the moment you copy one, reads it with Apple's on-device language model, and shows a ready-made event under the menu bar icon. One click saves it, and iCloud puts it on your iPhone and Apple Watch.
+You see dates everywhere: on flyers, in group chats, in emails, on webinar pages. Getting them into a calendar means retyping them. Catchy watches for the moment you copy one, reads it with Apple's on-device language model, and shows a ready-made event in a black island that grows out of the notch. One click saves it, and iCloud puts it on your iPhone and Apple Watch.
 
 Nothing leaves your Mac. There's no account, no server and no cloud AI.
 
@@ -19,7 +19,7 @@ Nothing leaves your Mac. There's no account, no server and no cloud AI.
 |---|---|
 | **Copy text** with a date, on your Mac or your iPhone (Universal Clipboard) | opens a pre-filled event card |
 | **Copy a picture**: a screenshot, or a photo of a poster copied on your iPhone | reads the text in it and opens the card |
-| Press **⌥⌘C** and drag over part of the screen | reads that area and opens the card |
+| **Tap ⌥⌘** (Option + Command together) and drag over part of the screen | reads that area and opens the card |
 | Select text, right-click › **Services › Catch with Catchy** | opens the card |
 
 - **Understands messy text:** relative dates ("this saturday 7-10pm"), split dates and times ("Sat, Oct 24 • 4pm"), and titles written in all caps.
@@ -58,7 +58,7 @@ To build on your own machine, set your team in *Signing & Capabilities* (or chan
 printf 'SPRING FLING!!\npotluck + live music\nthis saturday 7-10pm\nRiverside Park' | pbcopy
 ```
 
-A card for Saturday, 19:00–22:00 opens under the menu bar icon.
+A card for Saturday, 19:00–22:00 grows out of the notch.
 
 ## Permissions
 
@@ -68,7 +68,8 @@ Catchy only asks for a permission when you first need it:
 |---|---|---|
 | Calendars | First **Add to Calendar** | Save events; pick an iCloud calendar so they reach your iPhone |
 | Reminders | First **Add to Reminders** | Save tasks |
-| Screen Recording | First **⌥⌘C** | Read the area you select. macOS applies this only after a relaunch, so the popover has a **Reopen Catchy** button |
+| Screen Recording | First screen capture | Read the area you select. macOS applies this only after a relaunch, so Catchy shows a **Reopen Catchy** button |
+| Input Monitoring | **Turn On** in the island | Notice the ⌥⌘ tap (a shortcut with no letter key needs it). Catchy never records what you type |
 
 If one is denied, the card says so and links to the right pane in System Settings.
 
@@ -81,18 +82,19 @@ If one is denied, the card says so and links to the right pane in System Setting
 ## How it works
 
 ```
-copy / ⌥⌘C / Services ─▶ Vision (if it's an image) ─▶ NSDataDetector anchors ─▶ Foundation Models
+copy / ⌥⌘ / Services ─▶ Vision (if it's an image) ─▶ NSDataDetector anchors ─▶ Foundation Models
                                                                                   (@Generable GeneratedCatch)
-                                         Calendar / Reminders ◀── EventKit ◀── editable card in the popover
+                                         Calendar / Reminders ◀── EventKit ◀── editable card in the notch island
                                                   │
                                                   └─ iCloud ─▶ iPhone, Apple Watch
 ```
 
 - `Catchy/Services/EventExtractor.swift`: guided generation into a typed `GeneratedCatch` (events and tasks, times as written, plus their time zone).
 - `Catchy/Services/DateHints.swift`: Apple's date detector gives already-resolved dates to the model, and is the fallback when the model is unavailable.
-- `Catchy/Services/ClipboardWatcher.swift`, `GlobalHotKey.swift`, `ServiceProvider.swift`: the three ways in.
+- `Catchy/Services/ClipboardWatcher.swift`, `ModifierTapHotKey.swift`, `ServiceProvider.swift`: the three ways in.
 - `Catchy/Services/CalendarService.swift`: EventKit saving, clashes and undo.
-- `Catchy/App/StatusItemController.swift`: menu bar icon and Liquid Glass popover.
+- `Catchy/UI/Island.swift`: the pitch-black island that grows out of the notch, like the Dynamic Island.
+- `Catchy/App/StatusItemController.swift`: the menu bar icon that opens it.
 
 ## Built with the Devpost Learn Skill Pack
 

@@ -86,11 +86,11 @@ struct EventCardView: View {
             HStack {
                 if fromList {
                     Button("Done Editing", action: state.backToList)
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.islandProminent)
                         .keyboardShortcut(.defaultAction)
                 } else {
                     Button("Discard", action: state.done)
-                        .buttonStyle(.glass)
+                        .buttonStyle(.island)
                         .keyboardShortcut(.cancelAction)
                     Spacer()
                     Button {
@@ -103,7 +103,7 @@ struct EventCardView: View {
                                   systemImage: kind == .event ? "calendar.badge.plus" : "checklist")
                         }
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
                     .disabled(calendar.access(for: kind) == .denied)
                 }

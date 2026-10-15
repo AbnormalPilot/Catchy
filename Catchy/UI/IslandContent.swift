@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct PopoverView: View {
+/// What the expanded island shows, under the notch.
+struct IslandContent: View {
     @Bindable var state: AppState
 
     var body: some View {
@@ -9,15 +10,14 @@ struct PopoverView: View {
             content
                 .transition(.blurReplace)
         }
-        .padding(16)
-        .frame(width: 340)
+        .frame(width: 360)
         .animation(.smooth(duration: 0.3), value: state.phase)
     }
 
     private var header: some View {
         HStack(spacing: 8) {
             Image(.menuBarIcon)
-                .foregroundStyle(.tint)
+                .foregroundStyle(.white)
             Text("Catchy")
                 .font(.headline)
             Spacer()
@@ -96,19 +96,20 @@ private struct IdleView: View {
                 WelcomeView()
             }
 
-            GlassEffectContainer {
-                VStack(spacing: 8) {
+            VStack(spacing: 8) {
                     Button {
                         state.captureScreen()
                     } label: {
                         HStack {
                             Label("Capture Screen", systemImage: "viewfinder")
                             Spacer()
-                            Text("⌥⌘C").foregroundStyle(.secondary)
+                            if state.shortcutIsActive {
+                                Text("tap ⌥⌘").foregroundStyle(.secondary)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.islandProminent)
 
                     Button {
                         state.catchCurrentClipboard()
@@ -116,9 +117,11 @@ private struct IdleView: View {
                         Label("Catch from Clipboard", systemImage: "doc.on.clipboard")
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .buttonStyle(.glass)
-                }
-                .controlSize(.large)
+                    .buttonStyle(.island)
+            }
+
+            if !state.shortcutIsActive {
+                ShortcutSetupRow()
             }
 
             Label("Runs entirely on this Mac", systemImage: "lock.fill")
@@ -138,7 +141,7 @@ private struct WelcomeView: View {
                 .foregroundStyle(.secondary)
             VStack(alignment: .leading, spacing: 8) {
                 step("doc.on.clipboard", "Copy anything with a date", "on this Mac, or on your iPhone")
-                step("viewfinder", "Press ⌥⌘C and drag", "over a flyer, poster or screenshot")
+                step("viewfinder", "Tap ⌥⌘ and drag", "over a flyer, poster or screenshot")
                 step("contextualmenu.and.cursorarrow", "Or right-click selected text", "Services › Catch with Catchy")
                 step("lock", "Everything stays on this Mac", "read by Apple's on-device model")
             }
@@ -156,6 +159,30 @@ private struct WelcomeView: View {
                 Text(detail).font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+}
+
+/// The ⌥⌘ tap needs Input Monitoring, which only the user can grant.
+private struct ShortcutSetupRow: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "command")
+                .foregroundStyle(.secondary)
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Turn on the ⌥⌘ shortcut")
+                    .font(.callout.weight(.medium))
+                Text("Tap Option and Command together to capture the screen. macOS asks for Input Monitoring; Catchy only notices that shortcut, never what you type.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Turn On", action: InputMonitoringPermission.request)
+                    .buttonStyle(.island)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.06), in: .rect(cornerRadius: 12))
     }
 }
 
@@ -178,10 +205,10 @@ private struct ScreenAccessView: View {
             .foregroundStyle(.secondary)
             HStack {
                 Button("Reopen Catchy", action: ScreenCapturePermission.relaunch)
-                    .buttonStyle(.glass)
+                    .buttonStyle(.island)
                 Spacer()
                 Button("Allow Access", action: state.requestScreenAccess)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
             }
         }
@@ -251,14 +278,14 @@ private struct SavedView: View {
 
             HStack {
                 Button("Undo") { state.undo(saved) }
-                    .buttonStyle(.glass)
+                    .buttonStyle(.island)
                 Button(onlyReminders ? "Open Reminders" : "Open Calendar") {
                     onlyReminders ? state.calendar.openRemindersApp() : state.calendar.openCalendarApp()
                     state.done()
                 }
-                .buttonStyle(.glass)
+                .buttonStyle(.island)
                 Button("Done", action: state.done)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
             }
             .padding(.top, 4)
@@ -287,10 +314,10 @@ struct MessageView: View {
                 Spacer()
                 if let secondary {
                     Button(secondary.0, action: secondary.1)
-                        .buttonStyle(.glass)
+                        .buttonStyle(.island)
                 }
                 Button(primary.0, action: primary.1)
-                    .buttonStyle(.glassProminent)
+                    .buttonStyle(.islandProminent)
                     .keyboardShortcut(.defaultAction)
             }
         }
