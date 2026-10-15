@@ -61,6 +61,7 @@ final class AppState {
 
     let calendar = CalendarService()
     let extractor = EventExtractor()
+    let notifier = Notifier()
     private let regionSelector = RegionSelector()
 
     /// Wired up by the status item controller.
@@ -71,6 +72,10 @@ final class AppState {
 
     func prepare() {
         extractor.prewarm()
+        notifier.onUndo = { [weak self] saved in self?.undo(saved) }
+        notifier.onOpen = { [weak self] reminders in
+            reminders ? self?.calendar.openRemindersApp() : self?.calendar.openCalendarApp()
+        }
     }
 
     // MARK: Catching
@@ -175,7 +180,9 @@ final class AppState {
             // On denial the card and list show a banner pointing at System Settings.
             guard await calendar.requestAccessIfNeeded(for: Set(toSave.map(\.kind))) else { return }
             do {
-                phase = .saved(try calendar.save(toSave))
+                let saved = try calendar.save(toSave)
+                phase = .saved(saved)
+                notifier.announce(saved)
             } catch {
                 phase = .failed("Couldn't save: \(error.localizedDescription)")
             }
@@ -185,8 +192,8 @@ final class AppState {
     func undo(_ saved: SavedCatch) {
         do {
             try calendar.undo(saved)
-            // Back to what was caught, so a fix-and-resave is one click.
-            phase = .review
+            // Back to what was caught, so a fix-and-resave is one click (if it's still around).
+            phase = drafts.isEmpty ? .idle : .review
         } catch {
             phase = .failed("Couldn't undo: \(error.localizedDescription)")
         }

@@ -85,6 +85,8 @@ One surface: a compact pitch-black island, about 300 pt wide, with its header be
 
 ### Saving and Undo
 - One click saves. The first save triggers the system Calendar (or Reminders) prompt. If access was denied, the card shows a banner with **Open Privacy Settings** and disables the button.
+- Each event gets a Calendar alert, 15 minutes before by default; a bell chip on the card changes it (all-day: 9 AM on the day or the day before). The last choice is remembered (learner: "along with calendar notification").
+- A Mac notification confirms every save, with Undo and Open (learner: "have in mac notification as well").
 - After saving: the summary, "syncing to iPhone and Watch" when the calendar is in iCloud, **Undo** (removes what was just added), and **Open Calendar**. *(rec.)*
   - [ ] The event appears in Calendar.app and on the iPhone.
   - [ ] Undo removes it from Calendar.

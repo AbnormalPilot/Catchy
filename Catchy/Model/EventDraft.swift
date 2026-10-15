@@ -74,3 +74,75 @@ struct SavedCatch: Equatable {
         syncsWithICloud = syncsWithICloud && syncs
     }
 }
+
+/// The alert Catchy puts on an event. EventKit doesn't apply a calendar's default alerts to
+/// events created by apps, so without this there'd be no Calendar notification at all.
+enum EventAlert: String, CaseIterable, Identifiable {
+    case none, atStart, fiveMinutes, fifteenMinutes, thirtyMinutes, oneHour, oneDay
+
+    var id: String { rawValue }
+
+    /// All-day events get "9 AM on the day" or "9 AM the day before" instead of minute offsets.
+    static func options(allDay: Bool) -> [EventAlert] {
+        allDay ? [.none, .atStart, .oneDay] : allCases
+    }
+
+    /// Seconds relative to the event's start (midnight for all-day events), or nil for no alert.
+    func offset(allDay: Bool) -> TimeInterval? {
+        if allDay {
+            switch self {
+            case .none: return nil
+            case .oneDay: return -15 * 3600  // 9 AM the day before
+            default: return 9 * 3600         // 9 AM on the day
+            }
+        }
+        switch self {
+        case .none: return nil
+        case .atStart: return 0
+        case .fiveMinutes: return -5 * 60
+        case .fifteenMinutes: return -15 * 60
+        case .thirtyMinutes: return -30 * 60
+        case .oneHour: return -3600
+        case .oneDay: return -86_400
+        }
+    }
+
+    func title(allDay: Bool) -> String {
+        if allDay {
+            switch self {
+            case .none: return "None"
+            case .oneDay: return "Day before, 9 AM"
+            default: return "On the day, 9 AM"
+            }
+        }
+        switch self {
+        case .none: return "None"
+        case .atStart: return "At start"
+        case .fiveMinutes: return "5 minutes before"
+        case .fifteenMinutes: return "15 minutes before"
+        case .thirtyMinutes: return "30 minutes before"
+        case .oneHour: return "1 hour before"
+        case .oneDay: return "1 day before"
+        }
+    }
+
+    /// For the small chip on the card.
+    func shortTitle(allDay: Bool) -> String {
+        if allDay {
+            switch self {
+            case .none: return "Off"
+            case .oneDay: return "Day before"
+            default: return "9 AM"
+            }
+        }
+        switch self {
+        case .none: return "Off"
+        case .atStart: return "At start"
+        case .fiveMinutes: return "5m"
+        case .fifteenMinutes: return "15m"
+        case .thirtyMinutes: return "30m"
+        case .oneHour: return "1h"
+        case .oneDay: return "1d"
+        }
+    }
+}

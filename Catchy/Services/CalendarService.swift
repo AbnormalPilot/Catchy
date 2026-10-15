@@ -20,6 +20,11 @@ final class CalendarService {
         didSet { UserDefaults.standard.set(selectedReminderListID, forKey: "selectedReminderListID") }
     }
 
+    /// The alert added to saved events; remembered, like the calendar choice.
+    var alert = EventAlert(rawValue: UserDefaults.standard.string(forKey: "eventAlert") ?? "") ?? .fifteenMinutes {
+        didSet { UserDefaults.standard.set(alert.rawValue, forKey: "eventAlert") }
+    }
+
     func access(for kind: CatchKind) -> Access {
         kind == .event ? eventAccess : reminderAccess
     }
@@ -127,6 +132,9 @@ final class CalendarService {
         event.notes = draft.notes.isEmpty ? nil : draft.notes
         event.url = draft.url
         event.calendar = targetCalendar ?? store.defaultCalendarForNewEvents
+        if let offset = alert.offset(allDay: draft.isAllDay) {
+            event.addAlarm(EKAlarm(relativeOffset: offset))
+        }
         return event
     }
 

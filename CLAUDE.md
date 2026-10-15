@@ -154,3 +154,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   strict "HH:mm" silently made events all-day.
 - "PST"/"EST" written in summer mean the region's local time (America/Los_Angeles), not a fixed offset,
   same as Google Calendar. Deliberate.
+- EventKit does NOT apply a calendar's default alerts to events created by apps, so saved events had no
+  Calendar notification. `CalendarService.alert` (default 15 min, remembered) adds an `EKAlarm`; all-day
+  events use 9 AM on the day / day before. Each save also posts a `UNUserNotificationCenter` notification
+  (`Notifier`) with Undo/Open actions. Its delegate methods are `nonisolated` and hop to MainActor.

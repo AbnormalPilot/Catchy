@@ -64,6 +64,9 @@ struct EventCardView: View {
                 if calendar.access(for: kind) == .granted {
                     destinationPicker
                 }
+                if kind == .event {
+                    AlertPicker(calendar: calendar, allDay: state.draft.isAllDay)
+                }
                 ModelNote(state: state)
                 Spacer(minLength: 0)
                 if fromList {
@@ -256,5 +259,44 @@ struct ModelNote: View {
                 .overlay(Rectangle().frame(width: 14, height: 1.2).rotationEffect(.degrees(-45)).foregroundStyle(.tertiary))
                 .help(reason)
         }
+    }
+}
+
+/// The event's alert (Calendar's notification before it starts), as a small bell menu.
+struct AlertPicker: View {
+    @Bindable var calendar: CalendarService
+    let allDay: Bool
+
+    var body: some View {
+        Menu {
+            ForEach(EventAlert.options(allDay: allDay)) { option in
+                Button {
+                    calendar.alert = option
+                } label: {
+                    if option == shown {
+                        Label(option.title(allDay: allDay), systemImage: "checkmark")
+                    } else {
+                        Text(option.title(allDay: allDay))
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: shown == .none ? "bell.slash" : "bell")
+                Text(shown.shortTitle(allDay: allDay))
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Calendar alert: \(shown.title(allDay: allDay))")
+    }
+
+    /// Minute offsets don't apply to all-day events; show what will actually be used.
+    private var shown: EventAlert {
+        EventAlert.options(allDay: allDay).contains(calendar.alert) ? calendar.alert : (allDay ? .atStart : calendar.alert)
     }
 }

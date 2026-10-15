@@ -142,3 +142,4 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
 - Learner feedback: the pill looked cut by the notch (now taller, icons clear of it) and asked for hover-on-notch to open the quick panel instead of needing the shortcut. Updated `prd.md > Screens and Layout`.
 - Learner feedback: no pill while idle ("distracting", "taking the screen space") and a smoother hover. The waiting card now hides fully and returns on hover; the island window no longer resizes during the animation.
 - 2026-10-15: the learner approved scope, PRD and spec ("Looks good, approve"). Feedback from their first real save: the Add button went blank while waiting for Calendar permission, and they asked for a success animation. Both done.
+- Learner feedback: no notifications. Saved events now carry a Calendar alert (EventKit doesn't apply calendar defaults to app-created events), and each save posts a Mac notification with Undo/Open. Updated `prd.md > Saving and Undo`.
