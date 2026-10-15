@@ -25,7 +25,7 @@ final class StatusItemController: NSObject {
     }
 
     @objc private func toggleIsland() {
-        island.isShown ? island.toggle() : show()
+        island.isShown ? island.hide() : show()
     }
 
     private func show() {

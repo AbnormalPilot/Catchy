@@ -116,12 +116,16 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - `IslandButtonStyle`'s inner view can't be named `Body`; it collides with `ButtonStyle.Body`.
 - Island feel (user feedback "very big", "animation feel dropped", "smoother transition" on window switch):
   keep it ~300 pt wide with the header in the strip beside the notch; never animate `.blur` on the island
-  (per-frame cost on a big view); one interruptible spring (`IslandView.spring`) for every change; on app
-  switch or outside click a pending card collapses to a compact pill (click to reopen) instead of closing;
+  (per-frame cost on a big view); one interruptible spring (`IslandView.spring`) for the shape;
   `.environment(\.controlActiveState, .key)` stops controls flashing grey when focus leaves.
 - `.datePickerStyle(.field)` drops the stepper arrows; much tighter than `.compact` on macOS.
-- The compact pill must be taller than the notch (+8) with icons ≥14 pt clear of it, or the camera
-  housing's rounded corners make it look cut (user feedback).
+- No idle pill (user: "distracting", "taking the screen space"). Switching apps or clicking away hides
+  the island completely; a waiting card is kept and comes back when you hover the notch. The only compact
+  state is the spinner while reading (taller than the notch by 8, icons clear of it, or it looks cut).
+- Hover smoothness: the island window is a fixed 400×520 transparent canvas and never resizes; only the
+  black shape springs. Resizing the window mid-spring caused the stutter. Clicks pass through everything
+  but the shape via `panel.ignoresMouseEvents`, updated by the 50 ms tracker. Content fades in 70 ms
+  after the shape starts growing.
 - Hover the notch → the island opens (0.15 s dwell, no buttons held, not while reading); leaving closes it
   unless you clicked/typed inside (`pinned`). Tracking polls `NSEvent.mouseLocation` every 80 ms; global
   mouse-moved monitors miss events over our own panel. Test it by warping the cursor with

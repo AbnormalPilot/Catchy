@@ -5,11 +5,10 @@ import SwiftUI
 @Observable
 final class IslandModel {
     enum Mode {
-        /// Tucked into the notch (window ordered out once the spring settles).
+        /// Tucked into the notch (window ordered out once the spring settles). A waiting card is
+        /// kept; hovering the notch brings it back. Nothing stays on screen while idle.
         case hidden
-        /// Notch-height pill: logo plus activity or a "waiting" badge. Click to expand.
-        case compact
-        /// The full card.
+        /// Open. Shown compact (notch-height spinner) while reading, otherwise the full card.
         case expanded
     }
 
@@ -52,40 +51,42 @@ struct NotchShape: Shape {
 struct IslandView: View {
     @Bindable var state: AppState
     let island: IslandModel
-    /// The size the panel needs; the controller fits the window to it.
-    let onSize: (CGSize) -> Void
-    let onExpand: () -> Void
+    /// The black shape's current target size, for hit-testing (clicks elsewhere pass through).
+    let onShapeSize: (CGSize) -> Void
 
     @State private var contentSize: CGSize = .zero
 
     static let ear: CGFloat = 8
-    /// One interruptible spring for everything, so a quick re-open retargets instead of restarting.
-    static let spring = Animation.spring(response: 0.38, dampingFraction: 0.86)
+    /// One interruptible spring for the shape, so a quick re-open retargets instead of restarting.
+    static let spring = Animation.spring(response: 0.42, dampingFraction: 0.8)
 
-    private var showsCompact: Bool { island.mode == .compact || state.phase == .reading }
+    private var isOpen: Bool { island.mode == .expanded }
+    private var showsCompact: Bool { state.phase == .reading }
     private var closedSize: CGSize { CGSize(width: island.notch.width + 2 * Self.ear, height: island.notch.height) }
-    private var shapeSize: CGSize { island.mode == .hidden || contentSize == .zero ? closedSize : contentSize }
-    private var bottomRadius: CGFloat { island.mode == .hidden ? 10 : (showsCompact ? 14 : 22) }
+    private var shapeSize: CGSize { !isOpen || contentSize == .zero ? closedSize : contentSize }
+    private var bottomRadius: CGFloat { isOpen ? (showsCompact ? 14 : 22) : 10 }
 
     var body: some View {
         ZStack(alignment: .top) {
             NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius)
                 .fill(.black)
-                .frame(width: shapeSize.width, height: shapeSize.height)
 
             content
                 .fixedSize()
                 .onGeometryChange(for: CGSize.self, of: \.size) { size in
                     contentSize = size
-                    onSize(CGSize(width: max(size.width, closedSize.width), height: max(size.height, closedSize.height)))
                 }
-                .opacity(island.mode == .hidden ? 0 : 1)
-                .scaleEffect(island.mode == .hidden ? 0.94 : 1, anchor: .top)
+                // Content arrives just after the shape starts to grow, and leaves first.
+                .opacity(isOpen ? 1 : 0)
+                .scaleEffect(isOpen ? 1 : 0.96, anchor: .top)
+                .animation(isOpen ? .easeOut(duration: 0.2).delay(0.07) : .easeIn(duration: 0.1), value: isOpen)
         }
         .frame(width: shapeSize.width, height: shapeSize.height, alignment: .top)
         .clipShape(NotchShape(topRadius: Self.ear, bottomRadius: bottomRadius))
-        .animation(Self.spring, value: island.mode)
-        .animation(Self.spring, value: contentSize)
+        .animation(Self.spring, value: shapeSize)
+        .animation(Self.spring, value: bottomRadius)
+        .onChange(of: shapeSize, initial: true) { _, size in onShapeSize(size) }
+        // A fixed canvas: the window never resizes mid-animation, which is what made it stutter.
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.colorScheme, .dark)
         // Look like system UI even while another app has focus; no flash to grey controls.
@@ -95,9 +96,7 @@ struct IslandView: View {
     @ViewBuilder
     private var content: some View {
         if showsCompact {
-            CompactIsland(state: state, notch: island.notch)
-                .contentShape(.rect)
-                .onTapGesture { if state.phase != .reading { onExpand() } }
+            CompactIsland(notch: island.notch)
         } else {
             VStack(spacing: 0) {
                 IslandHeader(state: state, notch: island.notch)
@@ -162,9 +161,8 @@ private struct IslandHeader: View {
     }
 }
 
-/// Dynamic Island "compact" look: logo left of the notch, activity or a waiting badge right of it.
+/// Dynamic Island "compact" look while reading: logo left of the notch, spinner right of it.
 private struct CompactIsland: View {
-    let state: AppState
     let notch: CGSize
 
     var body: some View {
@@ -175,32 +173,13 @@ private struct CompactIsland: View {
                 .foregroundStyle(.white)
             // Clear of the camera housing's rounded corners, so nothing looks cut.
             Spacer(minLength: notch.width + 28)
-            trailing
-        }
-        .padding(.horizontal, 12 + IslandView.ear)
-        // A little taller than the notch, so the pill's rounded bottom shows below it.
-        .frame(height: notch.height + 8)
-    }
-
-    @ViewBuilder
-    private var trailing: some View {
-        if state.phase == .reading {
             ProgressView()
                 .controlSize(.mini)
                 .tint(.white)
-        } else {
-            // A card is waiting: what kind, and how many.
-            let count = max(state.drafts.count, 1)
-            HStack(spacing: 3) {
-                Image(systemName: state.drafts.first?.kind == .task ? "checklist" : "calendar")
-                Text("\(count)")
-            }
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(.black)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(.white, in: .capsule)
         }
+        .padding(.horizontal, 12 + IslandView.ear)
+        // A little taller than the notch, so the rounded bottom shows below it.
+        .frame(height: notch.height + 8)
     }
 }
 
@@ -232,43 +211,41 @@ final class IslandPanel: NSPanel {
 }
 
 final class IslandController {
+    /// Big enough for the largest card. The window keeps this size; only the black shape animates.
+    private static let canvas = CGSize(width: 400, height: 520)
+
     private let state: AppState
     private let model = IslandModel()
     private let panel = IslandPanel()
     private var screen: NSScreen?
-    private var size = CGSize(width: 201, height: 32)
+    private var shapeSize: CGSize = .zero
     private var outsideClicks: Any?
     private var appSwitches: Any?
-    private var pendingShrink: DispatchWorkItem?
+    private var insideClicks: Any?
     private var pendingOrderOut: DispatchWorkItem?
 
     // Hovering the notch opens the island; leaving closes it again unless you clicked inside.
-    private var hoverTimer: Timer?
+    private var tracker: Timer?
     private var hoverStarted: Date?
     private var leftAt: Date?
     private var openedByHover = false
     private var pinned = false
-    private var insideClicks: Any?
 
-    /// Open as the full card (compact counts as closed, so the menu bar icon expands it).
     var isShown: Bool { model.mode == .expanded }
     /// Called after the island has fully closed (for resetting finished catches).
     var onClose: () -> Void = {}
 
     init(state: AppState) {
         self.state = state
-        let hosting = NSHostingView(rootView: IslandView(
-            state: state,
-            island: model,
-            onSize: { [weak self] size in self?.fit(size) },
-            onExpand: { [weak self] in self?.show() }
-        ))
+        let hosting = NSHostingView(rootView: IslandView(state: state, island: model) { [weak self] size in
+            self?.shapeSize = size
+        })
         hosting.sizingOptions = []
         panel.contentView = hosting
         panel.onEscape = { [weak self] in self?.hide() }
 
-        hoverTimer = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.trackHover() }
+        tracker = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated { self?.track() }
         }
         insideClicks = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
             MainActor.assumeIsolated {
@@ -276,15 +253,15 @@ final class IslandController {
             }
             return event
         }
-
-        // Switching apps while a card is open tucks it into the notch instead of dropping it.
+        // Switching apps tucks the island away; a waiting card comes back on hover.
         appSwitches = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] note in
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
             MainActor.assumeIsolated {
-                guard app?.processIdentifier != ProcessInfo.processInfo.processIdentifier else { return }
-                self?.collapse()
+                guard app?.processIdentifier != ProcessInfo.processInfo.processIdentifier,
+                      self?.state.phase != .reading else { return }
+                self?.hide()
             }
         }
     }
@@ -294,11 +271,10 @@ final class IslandController {
         pinned = false
         leftAt = nil
         pendingOrderOut?.cancel()
-        if model.mode == .hidden {
+        if model.mode == .hidden, !panel.isVisible {
             screen = Self.targetScreen()
-            // Start from the notch-sized frame, so a hover-open grows out of the notch.
             model.notch = Self.notchSize(on: screen)
-            panel.setFrame(frame(for: size), display: false)
+            panel.setFrame(canvasFrame(), display: false)
         }
         panel.orderFrontRegardless()
         panel.makeKey()
@@ -306,21 +282,10 @@ final class IslandController {
         watchOutsideClicks(true)
     }
 
-    /// Back into the notch. A card that's still waiting stays as a compact pill.
-    func collapse() {
-        guard model.mode == .expanded else { return }
-        openedByHover = false
-        if state.phase == .review {
-            model.mode = .compact
-            watchOutsideClicks(false)
-        } else {
-            hide()
-        }
-    }
-
     func hide() {
         guard model.mode != .hidden else { return }
         model.mode = .hidden
+        openedByHover = false
         watchOutsideClicks(false)
         // Let it shrink back into the notch before the window goes.
         let orderOut = DispatchWorkItem { [weak self] in
@@ -333,20 +298,26 @@ final class IslandController {
     }
 
     func toggle() {
-        model.mode == .expanded ? collapse() : show()
+        model.mode == .expanded ? hide() : show()
     }
 
-    private func trackHover() {
+    /// Runs every 50 ms: hover-to-open, leave-to-close, and click-through outside the black shape.
+    private func track() {
         let mouse = NSEvent.mouseLocation
+        if panel.isVisible {
+            // Only the black shape takes clicks; the rest of the canvas passes them through.
+            panel.ignoresMouseEvents = !(model.mode == .expanded && shapeRect().contains(mouse))
+        }
+
         switch model.mode {
-        case .hidden, .compact:
-            // Brief dwell, no buttons held (not while dragging), and never mid-read.
-            guard NSEvent.pressedMouseButtons == 0, state.phase != .reading, hoverZone().contains(mouse) else {
+        case .hidden:
+            // Brief dwell, no buttons held (not while dragging).
+            guard NSEvent.pressedMouseButtons == 0, notchRect().contains(mouse) else {
                 hoverStarted = nil
                 return
             }
             if let started = hoverStarted {
-                if Date.now.timeIntervalSince(started) > 0.15 {
+                if Date.now.timeIntervalSince(started) > 0.12 {
                     hoverStarted = nil
                     state.calendar.refreshAccess()
                     show(byHover: true)
@@ -355,26 +326,15 @@ final class IslandController {
                 hoverStarted = .now
             }
         case .expanded:
-            guard openedByHover, !pinned else { return }
-            if panel.frame.insetBy(dx: -12, dy: -12).contains(mouse) {
+            guard openedByHover, !pinned, state.phase != .reading else { return }
+            if shapeRect().insetBy(dx: -14, dy: -14).contains(mouse) {
                 leftAt = nil
             } else if let leftAt {
-                if Date.now.timeIntervalSince(leftAt) > 0.3 { collapse() }
+                if Date.now.timeIntervalSince(leftAt) > 0.3 { hide() }
             } else {
                 leftAt = .now
             }
         }
-    }
-
-    /// The notch itself (or the pill, when one is showing); a thin strip at the top centre without a notch.
-    private func hoverZone() -> NSRect {
-        if model.mode == .compact { return panel.frame }
-        guard let screen = Self.targetScreen() else { return .zero }
-        let notch = Self.notchSize(on: screen)
-        let hasNotch = screen.safeAreaInsets.top > 0
-        let height = hasNotch ? notch.height : 4
-        return NSRect(x: Self.notchCenterX(on: screen) - notch.width / 2, y: screen.frame.maxY - height,
-                      width: notch.width, height: height)
     }
 
     private func watchOutsideClicks(_ on: Bool) {
@@ -383,7 +343,7 @@ final class IslandController {
                 MainActor.assumeIsolated {
                     // Reading shows the compact island; a stray click shouldn't cancel it.
                     guard let self, self.state.phase != .reading else { return }
-                    self.collapse()
+                    self.hide()
                 }
             }
         } else if !on, let monitor = outsideClicks {
@@ -392,29 +352,27 @@ final class IslandController {
         }
     }
 
-    /// Grow the window at once; shrink it after the spring settles so the animation isn't clipped.
-    private func fit(_ newSize: CGSize) {
-        pendingShrink?.cancel()
-        let grown = CGSize(width: max(newSize.width, size.width), height: max(newSize.height, size.height))
-        if grown != size {
-            size = grown
-            panel.setFrame(frame(for: grown), display: false)
-        }
-        guard grown != newSize else { return }
-        let shrink = DispatchWorkItem { [weak self] in
-            guard let self else { return }
-            self.size = newSize
-            self.panel.setFrame(self.frame(for: newSize), display: false)
-        }
-        pendingShrink = shrink
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: shrink)
+    private func canvasFrame() -> NSRect {
+        guard let screen = screen ?? NSScreen.main else { return .zero }
+        let size = Self.canvas
+        return NSRect(x: (Self.notchCenterX(on: screen) - size.width / 2).rounded(), y: screen.frame.maxY - size.height,
+                      width: size.width, height: size.height)
     }
 
-    private func frame(for size: CGSize) -> NSRect {
-        guard let screen = screen ?? NSScreen.main else { return .zero }
-        let centerX = Self.notchCenterX(on: screen)
-        return NSRect(x: (centerX - size.width / 2).rounded(), y: screen.frame.maxY - size.height,
-                      width: size.width, height: size.height)
+    /// Where the black shape is on screen right now.
+    private func shapeRect() -> NSRect {
+        let frame = panel.frame
+        return NSRect(x: frame.midX - shapeSize.width / 2, y: frame.maxY - shapeSize.height,
+                      width: shapeSize.width, height: shapeSize.height)
+    }
+
+    /// The notch itself; a thin strip at the top centre on a screen without one.
+    private func notchRect() -> NSRect {
+        guard let screen = Self.targetScreen() else { return .zero }
+        let notch = Self.notchSize(on: screen)
+        let height = screen.safeAreaInsets.top > 0 ? notch.height : 4
+        return NSRect(x: Self.notchCenterX(on: screen) - notch.width / 2, y: screen.frame.maxY - height,
+                      width: notch.width, height: height)
     }
 
     /// The screen you're working on: the one under the pointer.
