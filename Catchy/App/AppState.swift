@@ -10,7 +10,7 @@ final class AppState {
         case review
         case nothingFound
         case needsScreenAccess
-        case saved(SavedEvent)
+        case saved(SavedCatch)
         case failed(String)
     }
 
@@ -19,7 +19,19 @@ final class AppState {
     private(set) var rawText = ""
     private(set) var usedOnDeviceModel = true
     private(set) var isSaving = false
-    var draft = EventDraft.blank(notes: "")
+    /// Everything caught from one copy or capture. One shows as a card; several as a list.
+    var drafts: [EventDraft] = []
+    /// The draft open in the card. Nil while the list of several is showing.
+    var selection: Int?
+
+    /// The draft the card is editing.
+    var draft: EventDraft {
+        get { selection.flatMap { drafts.indices.contains($0) ? drafts[$0] : nil } ?? .blank(notes: "") }
+        set { if let selection, drafts.indices.contains(selection) { drafts[selection] = newValue } }
+    }
+
+    var showsList: Bool { drafts.count > 1 && selection == nil }
+    var includedDrafts: [EventDraft] { drafts.filter(\.isIncluded) }
 
     let calendar = CalendarService()
     let extractor = EventExtractor()
@@ -98,33 +110,54 @@ final class AppState {
         let result = await extractor.extract(from: text)
         guard !Task.isCancelled else { return }
         usedOnDeviceModel = result.usedOnDeviceModel
-        if let draft = result.draft {
-            self.draft = draft
-            phase = .review
-        } else {
-            phase = .nothingFound
-        }
+        drafts = result.drafts
+        selection = drafts.count == 1 ? 0 : nil
+        phase = drafts.isEmpty ? .nothingFound : .review
     }
 
     // MARK: Card actions
 
     /// "Create anyway" when no date was found: a blank card with the text kept in the notes.
     func editManually() {
-        draft = .blank(notes: String(rawText.prefix(500)))
+        drafts = [.blank(notes: String(rawText.prefix(500)))]
+        selection = 0
         phase = .review
     }
 
+    /// From the list: open one for editing, and come back to the list after.
+    func open(_ draft: EventDraft) {
+        selection = drafts.firstIndex { $0.id == draft.id }
+    }
+
+    func backToList() {
+        selection = nil
+    }
+
+    /// Saves the card, or every ticked row when the list of several is showing.
     func save() {
         guard !isSaving else { return }
+        let toSave = drafts.count > 1 ? includedDrafts : [draft]
+        guard !toSave.isEmpty else { return }
         isSaving = true
         Task {
             defer { isSaving = false }
-            guard await calendar.requestAccessIfNeeded() else { return }  // the card shows the denied banner
+            // On denial the card and list show a banner pointing at System Settings.
+            guard await calendar.requestAccessIfNeeded(for: Set(toSave.map(\.kind))) else { return }
             do {
-                phase = .saved(try calendar.save(draft))
+                phase = .saved(try calendar.save(toSave))
             } catch {
-                phase = .failed("Couldn't save the event: \(error.localizedDescription)")
+                phase = .failed("Couldn't save: \(error.localizedDescription)")
             }
+        }
+    }
+
+    func undo(_ saved: SavedCatch) {
+        do {
+            try calendar.undo(saved)
+            // Back to what was caught, so a fix-and-resave is one click.
+            phase = .review
+        } catch {
+            phase = .failed("Couldn't undo: \(error.localizedDescription)")
         }
     }
 

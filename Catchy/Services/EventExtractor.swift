@@ -2,15 +2,21 @@ import Foundation
 import FoundationModels
 import OSLog
 
-@Generable(description: "The single main calendar event described by a piece of text")
-struct GeneratedEvent {
-    @Guide(description: "True only if the text describes something that happens on a specific day")
-    var containsEvent: Bool
+@Generable
+enum GeneratedKind {
+    case event
+    case task
+}
 
-    @Guide(description: "Short, specific title a person would type into their calendar, in normal capitalization, without the date or time")
+@Generable(description: "One event or task found in the text")
+struct GeneratedItem {
+    @Guide(description: "event if it happens at a time or on a day; task if it is something to get done by a deadline")
+    var kind: GeneratedKind
+
+    @Guide(description: "Short, specific title a person would type into their calendar or to-do list, in normal capitalization, without the date or time")
     var title: String
 
-    @Guide(description: "Start date as yyyy-MM-dd")
+    @Guide(description: "Start date as yyyy-MM-dd. For a task, the due date")
     var startDate: String
 
     @Guide(description: "Start time as 24-hour HH:mm, or empty if the text gives no time")
@@ -32,18 +38,26 @@ struct GeneratedEvent {
     var notes: String
 }
 
+@Generable(description: "Everything worth adding to a calendar or to-do list in a piece of text")
+struct GeneratedCatch {
+    @Guide(description: "Each separate event or task with its own date, the main one first. Empty if nothing in the text has a date", .maximumCount(8))
+    var items: [GeneratedItem]
+}
+
 struct ExtractionResult {
-    var draft: EventDraft?
+    var drafts: [EventDraft]
     var usedOnDeviceModel: Bool
 }
 
-/// Turns raw text into an `EventDraft` using Apple's on-device Foundation Model,
+/// Turns raw text into `EventDraft`s using Apple's on-device Foundation Model,
 /// falling back to `NSDataDetector` when Apple Intelligence isn't available.
 final class EventExtractor {
     private static let instructions = """
-        You turn messy text (flyers, chat messages, emails, OCR from screenshots) into one calendar event.
-        Pick the main event, not side dates such as "RSVP by" or "tickets on sale".
-        The title should be short and specific, like "Spring Fling Potluck" or "Dentist with Dr. Patel". Never write it in all caps.
+        You turn messy text (flyers, chat messages, emails, schedules, OCR from screenshots) into calendar events and tasks.
+        A flyer or invitation usually has one event: pick it, not side dates such as "RSVP by" or "tickets on sale".
+        A schedule, agenda or syllabus lists several: return each one with its own date.
+        Something to get done by a date ("submit the form by Friday", "rent due on the 1st") is a task.
+        Titles are short and specific, like "Spring Fling Potluck" or "Dentist with Dr. Patel". Never write them in all caps.
         Resolve relative dates like "tomorrow" or "this Saturday" against today's date from the prompt.
         Write times exactly as the text gives them, and put any time zone the text names in timeZone. Don't convert.
         If no year is given, use the next upcoming occurrence.
@@ -81,16 +95,16 @@ final class EventExtractor {
 
         if isModelAvailable {
             do {
-                let draft = try await extractWithModel(clipped, hints: hints, now: now)
-                return ExtractionResult(draft: draft, usedOnDeviceModel: true)
+                let drafts = try await extractWithModel(clipped, hints: hints, now: now)
+                return ExtractionResult(drafts: drafts, usedOnDeviceModel: true)
             } catch {
                 log.error("Model extraction failed: \(error.localizedDescription, privacy: .public)")
             }
         }
-        return ExtractionResult(draft: hints.fallbackDraft(from: clipped), usedOnDeviceModel: false)
+        return ExtractionResult(drafts: hints.fallbackDrafts(from: clipped), usedOnDeviceModel: false)
     }
 
-    private func extractWithModel(_ text: String, hints: DateHints, now: Date) async throws -> EventDraft? {
+    private func extractWithModel(_ text: String, hints: DateHints, now: Date) async throws -> [EventDraft] {
         // A session keeps its transcript, so every catch gets a fresh one.
         let session = preparedSession ?? LanguageModelSession(instructions: Self.instructions)
         preparedSession = nil
@@ -108,13 +122,13 @@ final class EventExtractor {
             """
         let response = try await session.respond(
             to: prompt,
-            generating: GeneratedEvent.self,
+            generating: GeneratedCatch.self,
             options: GenerationOptions(sampling: .greedy)
         )
-        return Self.draft(from: response.content, text: text, hints: hints, now: now)
+        return response.content.items.compactMap { Self.draft(from: $0, text: text, hints: hints, now: now) }
     }
 
-    static func draft(from generated: GeneratedEvent, text: String, hints: DateHints, now: Date) -> EventDraft? {
+    static func draft(from generated: GeneratedItem, text: String, hints: DateHints, now: Date) -> EventDraft? {
         // Times are as written; read them in the zone the text names, if any.
         let hasTime = parseTime(generated.startTime) != nil
         let writtenZone = TimeZones.resolve(generated.timeZone)
@@ -127,7 +141,6 @@ final class EventExtractor {
                 ?? hints.dates.first.map({ calendar.startOfDay(for: $0.date) }) else {
             return nil
         }
-        if !generated.containsEvent && hints.dates.isEmpty { return nil }
 
         // Without an explicit year, a date in the past almost always means next year's.
         let textHasYear = text.range(of: #"\b(19|20)\d{2}\b"#, options: .regularExpression) != nil
@@ -155,13 +168,15 @@ final class EventExtractor {
         }
         if end < start { end = start }
 
+        let isTask = generated.kind == .task
         let location = generated.location.trimmingCharacters(in: .whitespacesAndNewlines)
         return EventDraft(
+            kind: isTask ? .task : .event,
             title: tidyTitle(generated.title),
             start: start,
             end: end,
             isAllDay: isAllDay,
-            location: location.isEmpty ? (hints.address ?? "") : location,
+            location: isTask ? "" : (location.isEmpty ? (hints.address ?? "") : location),
             notes: generated.notes.trimmingCharacters(in: .whitespacesAndNewlines),
             url: hints.url,
             sourceTimeZone: zone.flatMap { $0.secondsFromGMT(for: start) == TimeZone.current.secondsFromGMT(for: start) ? nil : $0 }

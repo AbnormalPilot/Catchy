@@ -39,7 +39,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Copy a line from the Devpost schedule written in ET and check the card's time.
   Commit: `Convert times written in other time zones`
 
-- [ ] **4. Several events from one capture**
+- [x] **4. Several events from one capture**
   Becomes usable: A schedule with several dates shows a checklist, and "Add 3 Events" saves them all.
   Why now: Changes the extractor's output to a list, which slice 5 also needs.
   PRD ref: `prd.md > Several at once`
@@ -49,7 +49,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Copy a 3-line schedule; uncheck one; add the rest.
   Commit: `Catch several events at once`
 
-- [ ] **5. Tasks go to Reminders**
+- [x] **5. Tasks go to Reminders**
   Becomes usable: "Submit the report by Friday" becomes a reminder card; Add to Reminders saves it.
   Why now: Layer 3 from the learner's brief; reuses the kind field from slice 4.
   PRD ref: `prd.md > The card`, `prd.md > Saving and Undo`
@@ -79,7 +79,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: In Notes, select a sentence with a date and use the service.
   Commit: `Add Catch with Catchy to the Services menu`
 
-- [ ] **8. Clash warning and Undo**
+- [x] **8. Clash warning and Undo**
   Becomes usable: The card warns about overlapping events; the saved view offers Undo.
   Why now: Trust: the user sees conflicts before saving and can take it back after.
   PRD ref: `prd.md > The card`, `prd.md > Saving and Undo`
@@ -126,3 +126,4 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
 
 - Slices 1–2 were built before the Skill Pack was installed (2026-10-15). The planning docs were written afterwards from the learner's brief, so these two are recorded as done.
 - Slices 3–10 are built ahead of the learner's approval of the docs, at their request ("do the needful autonomously"). The docs stay `draft` until they review them.
+- Slices 4, 5 and 8 landed in one commit: the extractor and the save path moved to a list of events/tasks together, and Undo/clash sat on the same EventKit code. The clash line and Undo need Calendar access to verify live; that's in the early hands-on checkpoint.

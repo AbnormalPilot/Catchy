@@ -1,7 +1,16 @@
 import Foundation
 
-/// An editable event shown on the card before it is saved to Calendar.
-struct EventDraft: Equatable {
+enum CatchKind: Equatable {
+    /// Happens at a time → Calendar.
+    case event
+    /// Something to do by a deadline → Reminders.
+    case task
+}
+
+/// An editable event or task shown on the card before it is saved.
+struct EventDraft: Equatable, Identifiable {
+    let id = UUID()
+    var kind: CatchKind = .event
     var title: String
     var start: Date
     var end: Date
@@ -11,6 +20,8 @@ struct EventDraft: Equatable {
     var url: URL?
     /// The zone the text was written in, when it isn't this Mac's ("3pm ET"). Times are stored absolute.
     var sourceTimeZone: TimeZone?
+    /// Ticked in the list when several were caught at once.
+    var isIncluded = true
 
     /// A starting point when nothing usable was found: next whole hour, one hour long.
     static func blank(notes: String, now: Date = .now) -> EventDraft {
@@ -40,11 +51,22 @@ enum CaptureSource: String {
     }
 }
 
-/// What the "saved" confirmation shows.
-struct SavedEvent: Equatable {
-    let title: String
-    let start: Date
-    let isAllDay: Bool
-    let calendarTitle: String
-    let syncsWithICloud: Bool
+/// What was just saved: enough for the confirmation and for Undo.
+struct SavedCatch: Equatable {
+    var eventIDs: [String] = []
+    var reminderIDs: [String] = []
+    var titles: [String] = []
+    var firstStart: Date?
+    var firstIsAllDay = false
+    var destinations: [String] = []
+    var syncsWithICloud = true
+
+    var count: Int { eventIDs.count + reminderIDs.count }
+
+    mutating func note(title: String, start: Date, isAllDay: Bool, destination: String, syncsWithICloud syncs: Bool) {
+        titles.append(title)
+        if firstStart == nil { firstStart = start; firstIsAllDay = isAllDay }
+        if !destinations.contains(destination) { destinations.append(destination) }
+        syncsWithICloud = syncsWithICloud && syncs
+    }
 }

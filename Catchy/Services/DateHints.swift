@@ -11,6 +11,8 @@ struct DateHints {
         let hasTime: Bool
         /// Set when the text names a zone ("3pm ET"); `date` is already converted to absolute time.
         let timeZone: TimeZone?
+        /// Which line of the text it came from, for pairing dates with titles in a schedule.
+        let line: Int
     }
 
     let dates: [DateMatch]
@@ -18,8 +20,10 @@ struct DateHints {
     let phrases: [String]
     let address: String?
     let url: URL?
+    private let lines: [String]
 
     init(text: String) {
+        lines = text.components(separatedBy: .newlines)
         let types: NSTextCheckingResult.CheckingType = [.date, .address, .link]
         guard let detector = try? NSDataDetector(types: types.rawValue) else {
             dates = []; phrases = []; address = nil; url = nil
@@ -31,19 +35,22 @@ struct DateHints {
         var address: String?
         var url: URL?
         for match in detector.matches(in: text, range: range) {
-            let phrase = Range(match.range, in: text).map { String(text[$0]) } ?? ""
+            guard let swiftRange = Range(match.range, in: text) else { continue }
+            let phrase = String(text[swiftRange])
             switch match.resultType {
             case .date:
                 guard let date = match.date else { continue }
                 phrases.append(phrase)
+                let line = text[..<swiftRange.lowerBound].reduce(0) { $1.isNewline ? $0 + 1 : $0 }
                 let found = DateMatch(date: date, duration: match.duration, phrase: phrase,
-                                      hasTime: Self.mentionsTime(phrase), timeZone: match.timeZone)
+                                      hasTime: Self.mentionsTime(phrase), timeZone: match.timeZone, line: line)
                 // Flyers split "Sat, Oct 24 • 4pm - 9pm" into a date and a time; join them back up.
                 if let previous = dates.last, !previous.hasTime, found.hasTime, Self.isTimeOnly(phrase),
+                   line - previous.line <= 1,
                    let merged = Self.combine(day: previous.date, time: date, timeZone: found.timeZone) {
                     dates[dates.count - 1] = DateMatch(date: merged, duration: found.duration,
                                                        phrase: previous.phrase + " " + phrase, hasTime: true,
-                                                       timeZone: found.timeZone)
+                                                       timeZone: found.timeZone, line: previous.line)
                 } else {
                     dates.append(found)
                 }
@@ -76,24 +83,44 @@ struct DateHints {
         return "Date phrases found in the text, already resolved:\n" + lines.joined(separator: "\n")
     }
 
-    /// Best-effort draft without the language model.
-    func fallbackDraft(from text: String) -> EventDraft? {
-        guard let first = dates.first else { return nil }
-        let calendar = Calendar.current
-        let start = first.hasTime ? first.date : calendar.startOfDay(for: first.date)
-        let end = first.duration > 0 ? start.addingTimeInterval(first.duration) : start.addingTimeInterval(3600)
+    /// Best-effort drafts without the language model: one per line that has its own date
+    /// (a schedule), otherwise one for the whole text.
+    func fallbackDrafts(from text: String) -> [EventDraft] {
+        let distinctLines = Set(dates.map(\.line))
+        if dates.count > 1, distinctLines.count == dates.count {
+            return dates.prefix(8).map { match in
+                let ownTitle = Self.titleCandidate(lines[match.line], skipping: phrases)
+                return draft(for: match, title: ownTitle.isEmpty ? Self.guessTitle(from: text, skipping: phrases) : ownTitle,
+                             isTask: Self.looksLikeTask(lines[match.line]))
+            }
+        }
+        guard let first = dates.first else { return [] }
+        return [draft(for: first, title: Self.guessTitle(from: text, skipping: phrases),
+                      isTask: Self.looksLikeTask(lines[first.line]))]
+    }
+
+    private func draft(for match: DateMatch, title: String, isTask: Bool) -> EventDraft {
+        let start = match.hasTime ? match.date : Calendar.current.startOfDay(for: match.date)
+        let end = match.duration > 0 ? start.addingTimeInterval(match.duration) : start.addingTimeInterval(3600)
         return EventDraft(
-            title: Self.guessTitle(from: text, skipping: phrases),
+            kind: isTask ? .task : .event,
+            title: title,
             start: start,
-            end: first.hasTime ? end : start,
-            isAllDay: !first.hasTime,
-            location: address ?? "",
+            end: match.hasTime ? end : start,
+            isAllDay: !match.hasTime,
+            location: isTask ? "" : (address ?? ""),
             notes: "",
             url: url,
-            sourceTimeZone: first.hasTime ? first.timeZone.flatMap {
+            sourceTimeZone: match.hasTime ? match.timeZone.flatMap {
                 $0.secondsFromGMT(for: start) == TimeZone.current.secondsFromGMT(for: start) ? nil : $0
             } : nil
         )
+    }
+
+    /// "Submit the report by Friday", "rent due on the 1st", "renew passport before March".
+    static func looksLikeTask(_ line: String) -> Bool {
+        let pattern = #"\b(due|deadline|submit|pay|renew|expires?|apply|return|finish|send|by|before)\b"#
+        return line.lowercased().range(of: pattern, options: .regularExpression) != nil
     }
 
     private static func mentionsTime(_ phrase: String) -> Bool {
@@ -120,15 +147,22 @@ struct DateHints {
 
     private static func guessTitle(from text: String, skipping phrases: [String]) -> String {
         for line in text.split(whereSeparator: \.isNewline) {
-            var candidate = String(line)
-            for phrase in phrases { candidate = candidate.replacingOccurrences(of: phrase, with: "") }
-            candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
-            if candidate.count >= 3 {
-                let title = String(candidate.prefix(60))
-                // Flyers shout; calendars don't.
-                return title == title.uppercased() ? title.capitalized : title
-            }
+            let candidate = titleCandidate(String(line), skipping: phrases)
+            if !candidate.isEmpty { return candidate }
         }
         return ""
+    }
+
+    private static func titleCandidate(_ line: String, skipping phrases: [String]) -> String {
+        var candidate = line
+        for phrase in phrases { candidate = candidate.replacingOccurrences(of: phrase, with: "") }
+        candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters).union(.symbols))
+        // "Submit the report by [Friday]" → "Submit the report".
+        candidate = candidate.replacingOccurrences(of: #"\s+(by|on|at|before|from|until|for|this|next)$"#, with: "",
+                                                   options: [.regularExpression, .caseInsensitive])
+        guard candidate.count >= 3 else { return "" }
+        let title = String(candidate.prefix(60))
+        // Flyers shout; calendars don't.
+        return title == title.uppercased() ? title.capitalized : title
     }
 }

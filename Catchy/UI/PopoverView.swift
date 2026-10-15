@@ -46,7 +46,11 @@ struct PopoverView: View {
         case .reading:
             ReadingView(text: state.rawText)
         case .review:
-            EventCardView(state: state)
+            if state.showsList {
+                CatchListView(state: state)
+            } else {
+                EventCardView(state: state)
+            }
         case .nothingFound:
             MessageView(
                 symbol: "calendar.badge.exclamationmark",
@@ -168,9 +172,11 @@ private struct ReadingView: View {
 }
 
 private struct SavedView: View {
-    let saved: SavedEvent
+    let saved: SavedCatch
     let state: AppState
     @State private var appeared = false
+
+    private var onlyReminders: Bool { saved.eventIDs.isEmpty }
 
     var body: some View {
         VStack(spacing: 10) {
@@ -178,16 +184,25 @@ private struct SavedView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.green)
                 .symbolEffect(.bounce, value: appeared)
-            Text(saved.title)
+            Text(saved.count == 1 ? (saved.titles.first ?? "") : "Added \(saved.count) items")
                 .font(.headline)
                 .multilineTextAlignment(.center)
-            Text(saved.isAllDay
-                 ? saved.start.formatted(.dateTime.weekday(.wide).month().day())
-                 : saved.start.formatted(.dateTime.weekday(.wide).month().day().hour().minute()))
-                .font(.callout)
-                .foregroundStyle(.secondary)
+            if saved.count == 1, let start = saved.firstStart {
+                Text(saved.firstIsAllDay
+                     ? start.formatted(.dateTime.weekday(.wide).month().day())
+                     : start.formatted(.dateTime.weekday(.wide).month().day().hour().minute()))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(saved.titles.joined(separator: " · "))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+            let destination = saved.destinations.joined(separator: " and ")
             Label(
-                saved.syncsWithICloud ? "Added to \(saved.calendarTitle) · syncing to iPhone and Watch" : "Added to \(saved.calendarTitle)",
+                saved.syncsWithICloud ? "Added to \(destination) · syncing to iPhone and Watch" : "Added to \(destination)",
                 systemImage: saved.syncsWithICloud ? "icloud" : "calendar"
             )
             .font(.caption)
@@ -195,8 +210,10 @@ private struct SavedView: View {
             .multilineTextAlignment(.center)
 
             HStack {
-                Button("Open Calendar") {
-                    state.calendar.openCalendarApp()
+                Button("Undo") { state.undo(saved) }
+                    .buttonStyle(.glass)
+                Button(onlyReminders ? "Open Reminders" : "Open Calendar") {
+                    onlyReminders ? state.calendar.openRemindersApp() : state.calendar.openCalendarApp()
                     state.done()
                 }
                 .buttonStyle(.glass)
