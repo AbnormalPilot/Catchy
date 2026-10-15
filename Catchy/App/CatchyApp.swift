@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: StatusItemController?
     private let clipboard = ClipboardWatcher()
     private var hotKey: GlobalHotKey?
+    private let services = ServiceProvider()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = StatusItemController(state: state)
@@ -29,6 +30,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKey = GlobalHotKey(keyCode: kVK_ANSI_C, modifiers: cmdKey | optionKey) { [weak self] in
             self?.state.captureScreen()
         }
+
+        services.onText = { [weak self] text in
+            self?.state.catchText(text, from: .service)
+        }
+        NSApp.servicesProvider = services
+        NSUpdateDynamicServices()
 
         state.prepare()
     }

@@ -99,7 +99,15 @@ struct DateHints {
                       isTask: Self.looksLikeTask(lines[first.line]))]
     }
 
-    private func draft(for match: DateMatch, title: String, isTask: Bool) -> EventDraft {
+    private func draft(for match: DateMatch, title rawTitle: String, isTask: Bool) -> EventDraft {
+        // "Lunch with Sam at Kala Ghoda Cafe" → title + location, when no address was detected.
+        var title = rawTitle
+        var location = address ?? ""
+        if !isTask, location.isEmpty,
+           let at = rawTitle.range(of: #"\s+at\s+(?=[A-Z0-9])"#, options: .regularExpression) {
+            location = String(rawTitle[at.upperBound...])
+            title = String(rawTitle[..<at.lowerBound])
+        }
         let start = match.hasTime ? match.date : Calendar.current.startOfDay(for: match.date)
         let end = match.duration > 0 ? start.addingTimeInterval(match.duration) : start.addingTimeInterval(3600)
         return EventDraft(
@@ -108,7 +116,7 @@ struct DateHints {
             start: start,
             end: match.hasTime ? end : start,
             isAllDay: !match.hasTime,
-            location: isTask ? "" : (address ?? ""),
+            location: isTask ? "" : location,
             notes: "",
             url: url,
             sourceTimeZone: match.hasTime ? match.timeZone.flatMap {
@@ -156,7 +164,8 @@ struct DateHints {
     private static func titleCandidate(_ line: String, skipping phrases: [String]) -> String {
         var candidate = line
         for phrase in phrases { candidate = candidate.replacingOccurrences(of: phrase, with: "") }
-        candidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters).union(.symbols))
+        candidate = candidate.replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters).union(.symbols))
         // "Submit the report by [Friday]" → "Submit the report".
         candidate = candidate.replacingOccurrences(of: #"\s+(by|on|at|before|from|until|for|this|next)$"#, with: "",
                                                    options: [.regularExpression, .caseInsensitive])

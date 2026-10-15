@@ -20,6 +20,7 @@
 		8EA7DEB95CC003D9DCFF60D0 /* StatusItemController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F814D803924155A338E8C06 /* StatusItemController.swift */; };
 		A1452986E68EE6547671558F /* CatchListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C9890794734F9FBFEC23831 /* CatchListView.swift */; };
 		A9EE1E848DFA07096E6F718E /* EventCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E02CD0BEB5C1E3BBD858AA1B /* EventCardView.swift */; };
+		B695448C7B1EEA9263926A4A /* ServiceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD732FDF13375B2942AAB290 /* ServiceProvider.swift */; };
 		CC180C1A133083FF93875A21 /* RegionSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D8F7AA5AA052F81EE5D079E /* RegionSelector.swift */; };
 		D37F2AD23B62CB77601CFBE6 /* DateHints.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71783E885A68BE407F2087D4 /* DateHints.swift */; };
 		DDB1853E482AA0919090F3B9 /* ScreenCapture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 687A7BB0E7445262CD6F9F81 /* ScreenCapture.swift */; };
@@ -44,6 +45,7 @@
 		9F786C5255027B6D9B592FEC /* EventDraft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventDraft.swift; sourceTree = "<group>"; };
 		B050515E61B37636A476E14F /* ClipboardWatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardWatcher.swift; sourceTree = "<group>"; };
 		C49D6D50EE7282D4024320D1 /* GlobalHotKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalHotKey.swift; sourceTree = "<group>"; };
+		DD732FDF13375B2942AAB290 /* ServiceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceProvider.swift; sourceTree = "<group>"; };
 		E02CD0BEB5C1E3BBD858AA1B /* EventCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCardView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -114,6 +116,7 @@
 				68DC415448E7E5626A0D66C0 /* EventExtractor.swift */,
 				C49D6D50EE7282D4024320D1 /* GlobalHotKey.swift */,
 				687A7BB0E7445262CD6F9F81 /* ScreenCapture.swift */,
+				DD732FDF13375B2942AAB290 /* ServiceProvider.swift */,
 				19BBFE50F4C26664E5274DA5 /* TimeZones.swift */,
 			);
 			path = Services;
@@ -213,6 +216,7 @@
 				5F9810C615EBD67EEF3B672B /* PopoverView.swift in Sources */,
 				CC180C1A133083FF93875A21 /* RegionSelector.swift in Sources */,
 				DDB1853E482AA0919090F3B9 /* ScreenCapture.swift in Sources */,
+				B695448C7B1EEA9263926A4A /* ServiceProvider.swift in Sources */,
 				8EA7DEB95CC003D9DCFF60D0 /* StatusItemController.swift in Sources */,
 				6730D54FB436803ED3B1ECC0 /* TimeZones.swift in Sources */,
 			);

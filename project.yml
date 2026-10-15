@@ -31,6 +31,14 @@ targets:
         NSCalendarsFullAccessUsageDescription: Catchy adds the events you catch to your calendar, and lets you pick which calendar (choose an iCloud one to see it on your iPhone and Watch).
         NSCalendarsWriteOnlyAccessUsageDescription: Catchy adds the events you catch to your calendar.
         NSRemindersFullAccessUsageDescription: Catchy adds the tasks you catch to Reminders.
+        NSServices:
+          - NSMessage: catchText
+            NSPortName: Catchy
+            NSMenuItem:
+              default: Catch with Catchy
+            NSSendTypes:
+              - public.utf8-plain-text
+              - NSStringPboardType
     entitlements:
       path: Catchy/Resources/Catchy.entitlements
       properties:

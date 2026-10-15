@@ -69,7 +69,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: On the iPhone, copy a photo of a poster; watch the Mac.
   Commit: `Catch dates from copied images`
 
-- [ ] **7. Catch with Catchy in the right-click menu**
+- [x] **7. Catch with Catchy in the right-click menu**
   Becomes usable: Select text anywhere → Services → Catch with Catchy.
   Why now: Small, native, and needs no hotkey to learn.
   PRD ref: `prd.md > Services menu`

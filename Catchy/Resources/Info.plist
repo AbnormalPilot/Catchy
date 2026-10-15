@@ -30,5 +30,24 @@
 	<string>Catchy adds the events you catch to your calendar.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>Catchy adds the tasks you catch to Reminders.</string>
+	<key>NSServices</key>
+	<array>
+		<dict>
+			<key>NSMenuItem</key>
+			<dict>
+				<key>default</key>
+				<string>Catch with Catchy</string>
+			</dict>
+			<key>NSMessage</key>
+			<string>catchText</string>
+			<key>NSPortName</key>
+			<string>Catchy</string>
+			<key>NSSendTypes</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+				<string>NSStringPboardType</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
