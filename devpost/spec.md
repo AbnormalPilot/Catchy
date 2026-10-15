@@ -47,6 +47,8 @@ PRD ref: `prd.md > The Core Journey`.
   `xcodebuild -project Catchy.xcodeproj -scheme Catchy -configuration Debug -derivedDataPath build build && open build/Build/Products/Debug/Catchy.app`
 - Try it: copy `Board games night friday 8pm at The Hive` → the card opens under the menu bar icon.
 - The demo video is recorded locally. No deployment, and none needed. The public GitHub repo is the code artifact.
+- Public repository: https://github.com/AbnormalPilot/Catchy (MIT, published 2026-10-15 with the learner's approval).
+- Demo video: not recorded yet.
 
 ## Look and Feel
 Carried from `prd.md > Look and Feel`:

@@ -65,7 +65,9 @@ pass/fail on those docs existing. Docs stay `status: draft` until the learner sa
 ## Git habit
 - Commit after every working step (builds and does what it says). Small, plain messages, imperative mood.
 - Commit as the local git user only. **No `Co-Authored-By` trailers, no "Generated with Claude", no AI mention.**
-- Local commits only; never push unless asked.
+- Public repo: https://github.com/AbnormalPilot/Catchy (origin/main). Commit locally as before; push only
+  when the user asks, or before the hackathon deadline with their OK. `devpost/learner-profile.md` must
+  never be pushed (it's gitignored; check `git ls-files` before any push).
 
 ## Self-improvement
 This file is a living document. Whenever you hit a surprise, fix a mistake, learn how an API really
