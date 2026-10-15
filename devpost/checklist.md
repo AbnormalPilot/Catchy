@@ -99,7 +99,7 @@ Build mode: fast. The learner asked the agent to proceed autonomously ("do the n
   Learner check: Toggle Pause and copy something.
   Commit: `Add welcome, pause and launch at login`
 
-- [ ] **10. Ready to ship**
+- [x] **10. Ready to ship**
   Becomes usable: README with install and demo steps, MIT LICENSE, demo script.
   Why now: Required for submission.
   PRD ref: `prd.md > What We're Building`
