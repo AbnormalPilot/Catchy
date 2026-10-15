@@ -53,7 +53,7 @@ final class ClipboardWatcher {
                   (4...5000).contains(text.count),
                   text != lastText,
                   // macOS misses "meet with Sujan in 20 mins"; chat-length text gets a local check for that.
-                  systemSeesEvent || (text.count <= 280 && DateHints.relativeTimes(in: text, now: .now).start != nil)
+                  systemSeesEvent || (text.count <= 280 && Self.mentionsRelativeTime(text))
             else { return }
             lastText = text
             onEventText(text, .clipboard)
@@ -75,6 +75,11 @@ final class ClipboardWatcher {
             lastText = text
             onEventText(text, .image)
         }
+    }
+
+    private static func mentionsRelativeTime(_ text: String) -> Bool {
+        let relative = DateHints.relativeTimes(in: text, now: .now)
+        return relative.start != nil || relative.duration != nil
     }
 
     /// Runs off the main actor: the system detector doesn't expose the contents to us.

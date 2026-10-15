@@ -102,3 +102,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - Neither `NSDataDetector` nor the pasteboard's `detectedPatterns`/`detectedValues` understand relative times
   ("meet with sujan 20 mins", "in 2 hours", "for 15 mins"). `DateHints.relativeTimes` handles them, and the
   clipboard gate also lets chat-length text (≤280 chars) through when it has one. README's privacy note says so.
+- Read lengths in context (user correction): only "in 20 mins" is a start time. A bare "20 mins" or "for 20 mins"
+  is how long it lasts; with no start given, start at the next 5-minute mark. The model prompt says the same.
+- `Calendar.date(bySetting: .second, value: 0, of:)` returns the *next* matching minute, not a truncation.
+  Use `DateHints.wholeMinute`.

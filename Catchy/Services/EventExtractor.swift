@@ -60,6 +60,7 @@ final class EventExtractor {
         Titles are short and specific, like "Spring Fling Potluck" or "Dentist with Dr. Patel". Never write them in all caps.
         Resolve relative dates like "tomorrow" or "this Saturday" against today's date from the prompt.
         Write times exactly as the text gives them, and put any time zone the text names in timeZone. Don't convert.
+        A length like "20 mins" or "for an hour" sets endTime to the start plus that length. "In 20 mins" is when it starts.
         If no year is given, use the next upcoming occurrence.
         Leave a field empty when the text does not say it. Never invent details.
         OCR text can have broken lines and typos; read through them.
