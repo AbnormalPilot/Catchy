@@ -139,11 +139,11 @@ struct DateHints {
         // "Lunch with Sam at Kala Ghoda Cafe" → title + location, when no address was detected.
         var title = rawTitle
         var location = address ?? ""
-        if !isTask, location.isEmpty,
-           let at = rawTitle.range(of: #"\s+at\s+(?=[A-Z0-9])"#, options: .regularExpression) {
-            location = String(rawTitle[at.upperBound...])
-            title = String(rawTitle[..<at.lowerBound])
+        if !isTask, location.isEmpty, let place = TextCleanup.spokenPlace(in: lines.joined(separator: " ")) {
+            location = place.place
+            title = title.replacingOccurrences(of: place.phrase, with: "")
         }
+        title = Self.tidy(TextCleanup.spokenTitle(title))
         let start = match.hasTime ? match.date : Calendar.current.startOfDay(for: match.date)
         let end = match.duration > 0 ? start.addingTimeInterval(match.duration) : start.addingTimeInterval(3600)
         return EventDraft(

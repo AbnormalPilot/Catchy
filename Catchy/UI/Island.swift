@@ -249,7 +249,11 @@ final class IslandController {
         })
         hosting.sizingOptions = []
         panel.contentView = hosting
-        panel.onEscape = { [weak self] in self?.hide(reason: "escape") }
+        panel.onEscape = { [weak self] in
+            guard let self else { return }
+            if self.state.phase == .listening { self.state.cancelListening() }
+            self.hide(reason: "escape")
+        }
 
         // Mouse-moved events need no permission. Global covers other apps (full-screen ones
         // included); local covers the pointer over our own panel.
@@ -291,7 +295,7 @@ final class IslandController {
             let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
             MainActor.assumeIsolated {
                 guard app?.processIdentifier != ProcessInfo.processInfo.processIdentifier,
-                      self?.state.phase != .reading else { return }
+                      self?.state.isBusy == false else { return }
                 self?.hide(reason: "app switch to \(app?.localizedName ?? "?")")
             }
         }
@@ -364,7 +368,7 @@ final class IslandController {
             pendingHoverOpen = open
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: open)
         case .expanded:
-            guard openedByHover, !pinned, state.phase != .reading else { return }
+            guard openedByHover, !pinned, !state.isBusy else { return }
             if shapeRect().insetBy(dx: -14, dy: -14).contains(mouse) {
                 pendingLeave?.cancel()
                 pendingLeave = nil
@@ -412,7 +416,7 @@ final class IslandController {
             outsideClicks = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
                 MainActor.assumeIsolated {
                     // Reading shows the compact island; a stray click shouldn't cancel it.
-                    guard let self, self.state.phase != .reading else { return }
+                    guard let self, !self.state.isBusy else { return }
                     self.hide(reason: "outside click")
                 }
             }

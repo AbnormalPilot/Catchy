@@ -28,6 +28,8 @@
 	<string>Catchy adds the events you catch to your calendar, and lets you pick which calendar (choose an iCloud one to see it on your iPhone and Watch).</string>
 	<key>NSCalendarsWriteOnlyAccessUsageDescription</key>
 	<string>Catchy adds the events you catch to your calendar.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Catchy listens only while you're speaking to it, and turns what you say into an event on this Mac.</string>
 	<key>NSRemindersFullAccessUsageDescription</key>
 	<string>Catchy adds the tasks you catch to Reminders.</string>
 	<key>NSServices</key>
@@ -49,5 +51,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Catchy turns what you say into text on this Mac; nothing is sent anywhere.</string>
 </dict>
 </plist>

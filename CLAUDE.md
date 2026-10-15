@@ -169,3 +169,9 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   re-requested at launch so an existing grant picks up new kinds. "Time Sensitive" needs the
   `com.apple.developer.usernotifications.time-sensitive` entitlement; `-allowProvisioningUpdates` made a
   Mac team profile for it automatically, and TCC grants (Calendar etc.) survived the re-sign.
+- Voice: `SpeechAnalyzer` + `SpeechTranscriber` (macOS 26) is fully on-device; first use downloads the model
+  via `AssetInventory`. The AVAudioEngine tap runs on a real-time thread: keep it in a `nonisolated`
+  @unchecked Sendable helper (`AudioFeed`); a MainActor closure there would trip Swift 6's isolation check.
+  Test without a mic: `say -o x.aiff "…"` then `analyzer.analyzeSequence(from: AVAudioFile)`.
+- Speech comes out as "5.30" and "at one"; neither Apple detector reads those. `TextCleanup.normalized`
+  runs on every extraction. Add a test in `CatchyTests/SpokenTests.swift` for each new phrasing.

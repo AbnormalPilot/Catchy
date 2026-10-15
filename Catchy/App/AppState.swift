@@ -11,6 +11,8 @@ final class AppState {
         case review
         case nothingFound
         case needsScreenAccess
+        /// Taking dictation (on-device); the words become a catch when you stop or pause.
+        case listening
         case saved(SavedCatch)
         case failed(String)
     }
@@ -62,6 +64,7 @@ final class AppState {
     let calendar = CalendarService()
     let extractor = EventExtractor()
     let notifier = Notifier()
+    let voice = VoiceListener()
     private let regionSelector = RegionSelector()
 
     /// Wired up by the status item controller.
@@ -100,6 +103,60 @@ final class AppState {
     }
 
     /// The hotkey flow: drag over part of the screen, OCR it, then extract like copied text.
+    /// Reading or listening: a stray click or app switch shouldn't cancel either.
+    var isBusy: Bool { phase == .reading || phase == .listening }
+
+    // MARK: Voice
+
+    /// Say it however you like ("uh, tomorrow, meet Ravi around five, maybe Starbucks").
+    /// Stops on Done, Return, or a pause after you've said something.
+    func startListening() {
+        work?.cancel()
+        source = .voice
+        rawText = ""
+        phase = .listening
+        showIsland()
+        work = Task {
+            do {
+                try await voice.start()
+                // Stop after ~2 s of quiet once something has been said; cap at 45 s.
+                let began = Date.now
+                while !Task.isCancelled, phase == .listening {
+                    try await Task.sleep(for: .milliseconds(250))
+                    let paused = !voice.transcript.isEmpty && Date.now.timeIntervalSince(voice.lastHeard) > 2.2
+                    if paused || Date.now.timeIntervalSince(began) > 45 {
+                        finishListening()
+                        return
+                    }
+                }
+            } catch is CancellationError {
+            } catch {
+                voice.cancel()
+                phase = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    func finishListening() {
+        guard phase == .listening else { return }
+        work?.cancel()
+        Task {
+            let said = await voice.finish()
+            guard !said.isEmpty else {
+                phase = .failed("Catchy didn't hear anything. Check the microphone and try again.")
+                return
+            }
+            catchText(said, from: .voice)
+        }
+    }
+
+    func cancelListening() {
+        guard phase == .listening else { return }
+        work?.cancel()
+        voice.cancel()
+        phase = .idle
+    }
+
     func captureScreen() {
         guard ScreenCapturePermission.isGranted else {
             phase = .needsScreenAccess
@@ -201,6 +258,7 @@ final class AppState {
     }
 
     func reset() {
+        if phase == .listening { voice.cancel() }
         work?.cancel()
         phase = .idle
     }

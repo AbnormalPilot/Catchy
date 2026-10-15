@@ -64,6 +64,9 @@ final class EventExtractor {
         If no year is given, use the next upcoming occurrence.
         Leave a field empty when the text does not say it. Never invent details.
         OCR text can have broken lines and typos; read through them.
+        Text can also be spoken: filler words ("uh", "like"), numbers as words ("five thirty"), and
+        self-corrections ("at five, no, six"). Use what the speaker finally meant. "Around five" in the
+        evening context means 17:00. Write a clean title, not the speaker's words.
         """
 
     private let log = Logger(subsystem: "app.catchy.Catchy", category: "extractor")
@@ -91,7 +94,7 @@ final class EventExtractor {
 
     func extract(from text: String, now: Date = .now) async -> ExtractionResult {
         // The model's context window is ~4k tokens; flyers never need more than this.
-        let clipped = String(text.prefix(3000))
+        let clipped = TextCleanup.normalized(String(text.prefix(3000)))
         let hints = DateHints(text: clipped)
 
         if isModelAvailable {

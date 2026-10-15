@@ -57,6 +57,11 @@ One surface: a compact pitch-black island, about 300 pt wide, with its header be
 - If Screen Recording access is missing, the island explains why it's needed, offers **Allow Access**, and then **Reopen Catchy** (macOS only applies the grant after a relaunch).
   - [ ] Dragging over a flyer on screen produces a card with its date and title.
 
+### Voice
+- The 🎙 button in the island starts on-device dictation (learner: "lets have voice input too, even un structured input gived as proper ouput"). A red waveform follows your voice and the words appear live. It stops on Done, Return, or a ~2 s pause after you've spoken; Esc cancels.
+- Casual speech becomes a clean card: fillers dropped, "5.30"/"at one"/"half past seven" read as times, "at the Starbucks in Bandra" becomes the location.
+  - [ ] "So tomorrow, I have to meet Ravi around 5.30, probably at the Starbucks in Bandra" gives "Meet Ravi", tomorrow 17:30, at Starbucks in Bandra.
+
 ### Services menu *(rec.)*
 - In any app, select text, right-click, then Services → **Catch with Catchy** to open the card from that text.
   - [ ] In Notes, selecting "Lunch with Sam tomorrow 1pm" and using the service opens a card for tomorrow at 13:00.

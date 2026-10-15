@@ -44,6 +44,7 @@ enum CaptureSource: String {
     case screen = "Screen"
     case image = "Image"
     case service = "Services"
+    case voice = "Voice"
 
     var symbol: String {
         switch self {
@@ -51,6 +52,7 @@ enum CaptureSource: String {
         case .screen: "viewfinder"
         case .image: "photo"
         case .service: "contextualmenu.and.cursorarrow"
+        case .voice: "mic"
         }
     }
 }

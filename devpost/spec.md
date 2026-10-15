@@ -82,6 +82,10 @@ PRD ref: `prd.md > Screen capture`.
 `NSApp.servicesProvider`. The `catchText` message is declared under `NSServices` in Info.plist, with the menu item "Catch with Catchy" and send type plain text.
 PRD ref: `prd.md > Services menu`.
 
+### VoiceListener + TextCleanup
+`VoiceListener` streams microphone audio (AVAudioEngine tap, converted to the analyzer's format off the main actor) into `SpeechAnalyzer` with a `SpeechTranscriber` (macOS 26, on-device; the language model downloads once through `AssetInventory`). `TextCleanup` normalizes times ("5.30", "at one", "quarter to ten") for every source, and turns spoken sentences into titles and places for the fallback. Needs the microphone permission and the `com.apple.security.device.audio-input` entitlement.
+PRD ref: `prd.md > Voice`.
+
 ### EventExtractor + DateHints
 `@Generable GeneratedCatch { items: [GeneratedItem] }`, with at most 8 items. Each `GeneratedItem` has:
 - `kind` (event | task)

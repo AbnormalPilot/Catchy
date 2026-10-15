@@ -37,6 +37,8 @@ struct IslandContent: View {
             )
         case .needsScreenAccess:
             ScreenAccessView(state: state)
+        case .listening:
+            ListeningView(state: state)
         case .saved(let saved):
             SavedView(saved: saved, state: state)
         case .failed(let message):
@@ -80,6 +82,13 @@ private struct IdleView: View {
                     Label("Clipboard", systemImage: "doc.on.clipboard")
                 }
                 .buttonStyle(.island)
+                Button {
+                    state.startListening()
+                } label: {
+                    Image(systemName: "mic.fill")
+                }
+                .buttonStyle(.island)
+                .help("Say it: \"lunch with Sam tomorrow at one\"")
                 Spacer(minLength: 0)
             }
 
@@ -129,6 +138,60 @@ private struct ShortcutSetupRow: View {
         }
         .padding(8)
         .background(Color.white.opacity(0.07), in: .rect(cornerRadius: 10))
+    }
+}
+
+/// Live dictation: a waveform that follows your voice, the words as they come, and Done/Cancel.
+private struct ListeningView: View {
+    let state: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Waveform(level: state.voice.level)
+                Text(state.voice.transcript.isEmpty ? "Listening… say when and what" : "Listening…")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+            }
+            if !state.voice.transcript.isEmpty {
+                Text(state.voice.transcript)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentTransition(.opacity)
+                    .animation(.easeOut(duration: 0.15), value: state.voice.transcript)
+            }
+            HStack(spacing: 6) {
+                Label("On this Mac", systemImage: "lock.fill")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.tertiary)
+                Spacer()
+                Button("Cancel", action: state.cancelListening)
+                    .buttonStyle(.island)
+                    .keyboardShortcut(.cancelAction)
+                Button("Done", action: state.finishListening)
+                    .buttonStyle(.islandProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+    }
+}
+
+/// Five bars that rise and fall with the microphone level.
+private struct Waveform: View {
+    let level: Float
+    private let weights: [CGFloat] = [0.45, 0.8, 1, 0.75, 0.5]
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 2.5) {
+            ForEach(weights.indices, id: \.self) { index in
+                Capsule()
+                    .fill(.red)
+                    .frame(width: 3, height: 4 + 16 * CGFloat(level) * weights[index])
+            }
+        }
+        .frame(width: 24, height: 22)
+        .animation(.spring(response: 0.18, dampingFraction: 0.6), value: level)
     }
 }
 

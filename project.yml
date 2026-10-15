@@ -31,6 +31,8 @@ targets:
         NSCalendarsFullAccessUsageDescription: Catchy adds the events you catch to your calendar, and lets you pick which calendar (choose an iCloud one to see it on your iPhone and Watch).
         NSCalendarsWriteOnlyAccessUsageDescription: Catchy adds the events you catch to your calendar.
         NSRemindersFullAccessUsageDescription: Catchy adds the tasks you catch to Reminders.
+        NSMicrophoneUsageDescription: Catchy listens only while you're speaking to it, and turns what you say into an event on this Mac.
+        NSSpeechRecognitionUsageDescription: Catchy turns what you say into text on this Mac; nothing is sent anywhere.
         NSServices:
           - NSMessage: catchText
             NSPortName: Catchy
@@ -44,6 +46,7 @@ targets:
       properties:
         com.apple.security.app-sandbox: true
         com.apple.security.personal-information.calendars: true
+        com.apple.security.device.audio-input: true
         com.apple.developer.usernotifications.time-sensitive: true
     scheme:
       testTargets:
@@ -64,6 +67,7 @@ targets:
       - Catchy/Services/DateHints.swift
       - Catchy/Services/TimeZones.swift
       - Catchy/Services/EventExtractor.swift
+      - Catchy/Services/TextCleanup.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.catchy.CatchyTests
