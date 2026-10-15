@@ -20,12 +20,8 @@ struct EventCardView: View {
                     .toggleStyle(.switch)
                     .controlSize(.mini)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                datePicker("Starts", selection: $state.draft.start)
+                datePicker("Starts", selection: startBinding)
                 datePicker("Ends", selection: $state.draft.end, in: state.draft.start...)
-            }
-            .onChange(of: state.draft.start) { old, new in
-                // Moving the start drags the end along, like Calendar does.
-                state.draft.end = state.draft.end.addingTimeInterval(new.timeIntervalSince(old))
             }
 
             field("mappin.and.ellipse", "Location", text: $state.draft.location)
@@ -78,6 +74,19 @@ struct EventCardView: View {
                 .disabled(calendar.access == .denied)
             }
         }
+    }
+
+    /// Moving the start drags the end along, like Calendar does. A binding rather than
+    /// `onChange`, which also fired when a new catch replaced the draft and broke its end time.
+    private var startBinding: Binding<Date> {
+        Binding(
+            get: { state.draft.start },
+            set: { newStart in
+                let shift = newStart.timeIntervalSince(state.draft.start)
+                state.draft.start = newStart
+                state.draft.end = state.draft.end.addingTimeInterval(shift)
+            }
+        )
     }
 
     private func datePicker(_ title: String, selection: Binding<Date>, in range: PartialRangeFrom<Date>? = nil) -> some View {

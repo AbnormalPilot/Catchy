@@ -73,3 +73,11 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   the popover has "Allow Access" (prompt/opens Settings) and "Reopen Catchy".
 - Test helpers that compile app files standalone: `swiftc` with a `main.swift` (top-level code) plus the
   files; don't pass `-parse-as-library`.
+- With an auto-hiding menu bar the status item's window sits *above* the screen (`window.screen == nil`)
+  and a popover shown from it lands in the corner. `StatusItemController` then anchors to an invisible
+  window at the icon's x at the top edge. Always test auto-popups with the menu bar hidden.
+- Auto-popups (copy/hotkey) need `NSApp.activate(ignoringOtherApps: true)`; plain `activate()` is refused
+  under cooperative activation and the card shows dimmed/inactive.
+- Don't use `onChange(of: draft.start)` to drag the end along: it also fires when a new catch replaces
+  the draft. Use a custom Binding so only user edits shift the end.
+- The user works on this Mac while you test; auto-popup tests steal focus. Keep live UI tests few and short.

@@ -40,14 +40,47 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     private func show() {
         guard let button = statusItem.button else { return }
         state.calendar.refreshAccess()
-        NSApp.activate()
+        // Plain activate() is only a request under cooperative activation, and a popover that
+        // appears because you copied something wouldn't come forward; this one still does.
+        NSApp.activate(ignoringOtherApps: true)
         if !popover.isShown {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            let anchor = anchorView(for: button)
+            popover.show(relativeTo: anchor.bounds, of: anchor, preferredEdge: .minY)
         }
         popover.contentViewController?.view.window?.makeKey()
     }
 
+    /// With an auto-hiding menu bar the status item's window sits above the top of the screen
+    /// (`window.screen == nil`) and a popover shown from it lands in the screen's corner. Then we
+    /// stand in an invisible window at the same x, right where the icon appears when revealed.
+    private func anchorView(for button: NSStatusBarButton) -> NSView {
+        guard let itemWindow = button.window, itemWindow.screen == nil else { return button }
+        let x = itemWindow.frame.midX
+        let screen = NSScreen.screens.first { $0.frame.minX <= x && x < $0.frame.maxX } ?? NSScreen.main
+        guard let screen else { return button }
+
+        let size = itemWindow.frame.size
+        anchorWindow.setFrame(
+            NSRect(x: itemWindow.frame.minX, y: screen.frame.maxY - size.height, width: size.width, height: size.height),
+            display: false
+        )
+        anchorWindow.orderFrontRegardless()
+        return anchorWindow.contentView ?? button
+    }
+
+    private lazy var anchorWindow: NSWindow = {
+        let window = NSWindow(contentRect: .zero, styleMask: .borderless, backing: .buffered, defer: true)
+        window.isOpaque = false
+        window.backgroundColor = .clear
+        window.ignoresMouseEvents = true
+        window.level = .statusBar
+        window.isReleasedWhenClosed = false
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        return window
+    }()
+
     func popoverDidClose(_ notification: Notification) {
+        anchorWindow.orderOut(nil)
         // A finished or failed catch shouldn't greet you next time.
         switch state.phase {
         case .saved, .failed, .nothingFound, .needsScreenAccess: state.reset()
