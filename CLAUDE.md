@@ -161,3 +161,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - Calendar never fires an alert whose time has already passed when the event is saved. "15 min before"
   on a "meet in 10 mins" event was silent (user: "didnt got any notification"). `EventAlert.effective`
   falls back to "at start" (none if already started); the bell chip shows the effective alert.
+- Generic icon in Notifications settings = stale LaunchServices/icon cache, not a missing icon (the built app
+  has AppIcon.icns). Every extra build of Catchy.app (e.g. a fresh-clone test build in the scratchpad)
+  registers another copy. After such a build run `lsregister -u <that copy>`. To refresh: `touch` the app,
+  `lsregister -f` it, `killall NotificationCenter usernoted`, then reopen System Settings.
