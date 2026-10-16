@@ -58,7 +58,7 @@ One surface: a compact pitch-black island, about 300 pt wide, with its header be
   - [ ] Dragging over a flyer on screen produces a card with its date and title.
 
 ### Voice
-- The 🎙 button in the island starts on-device dictation (learner: "lets have voice input too, even un structured input gived as proper ouput"). A red waveform follows your voice and the words appear live. It stops on Done, Return, or a ~2 s pause after you've spoken; Esc cancels.
+- Tapping ⌃⌘ (learner: "when i press cmd + control, the voice become active and it shows listeing in the dynamic island"), or the 🎙 button in the island, starts on-device dictation. Tapping ⌃⌘ again finishes; with a card open it dictates a change to that card (learner: "lets have voice input too, even un structured input gived as proper ouput"). A red waveform follows your voice and the words appear live. It stops on Done, Return, or a ~2 s pause after you've spoken; Esc cancels.
 - Casual speech becomes a clean card: fillers dropped, "5.30"/"at one"/"half past seven" read as times, "at the Starbucks in Bandra" becomes the location.
   - [ ] "So tomorrow, I have to meet Ravi around 5.30, probably at the Starbucks in Bandra" gives "Meet Ravi", tomorrow 17:30, at Starbucks in Bandra.
 

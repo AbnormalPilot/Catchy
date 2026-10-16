@@ -184,3 +184,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
 - Devpost thumbnail: `devpost/thumbnail.png` (3000×2000, 3:2, under 5 MB), drawn by
   `swift Tools/make-thumbnail.swift devpost/thumbnail.png`. No tagline on it: promotional copy is the
   learner's to write (Skill Pack rule); add theirs if they give one.
+- Shortcuts are modifier-only taps from one event tap (`ModifierTapHotKey`, a list of pairs): ⌥⌘ → capture,
+  ⌃⌘ → voice (toggle; with a card open it's a voice edit). A third modifier, any key or a click while held
+  spoils the tap, so ⌃⌘Q / ⌃⌘Space still work. Test by posting flagsChanged events (see the esc test).
+  When testing hover/Esc, park the pointer away from the notch first or hover will reopen the island.

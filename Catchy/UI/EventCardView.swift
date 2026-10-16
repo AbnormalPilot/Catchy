@@ -40,7 +40,7 @@ struct EventCardView: View {
                         .background(Color.white.opacity(0.1), in: .rect(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
-                .help("Change it by voice: “make it 6 pm”, “move it to Friday”, “at Starbucks”")
+                .help("Change it by voice (or tap ⌃⌘): “make it 6 pm”, “move it to Friday”, “at Starbucks”")
                 kindPicker
             }
 

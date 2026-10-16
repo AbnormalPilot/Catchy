@@ -27,7 +27,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         clipboard.isPaused = { [weak self] in self?.state.isPaused ?? false }
         clipboard.start()
 
-        let hotKey = ModifierTapHotKey { [weak self] in self?.state.captureScreen() }
+        let hotKey = ModifierTapHotKey([
+            .init(modifiers: [.maskCommand, .maskAlternate]) { [weak self] in self?.state.captureScreen() },
+            .init(modifiers: [.maskCommand, .maskControl]) { [weak self] in self?.state.toggleListening() },
+        ])
         hotKey.onStatusChange = { [weak self] active in self?.state.shortcutIsActive = active }
         hotKey.onEscape = { [weak self] in self?.state.escapePressed() }
         hotKey.start()

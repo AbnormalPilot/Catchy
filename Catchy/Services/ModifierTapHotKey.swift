@@ -1,19 +1,26 @@
 import AppKit
 
-/// A shortcut made only of modifiers: tap ⌥ and ⌘ together and let go.
+/// Shortcuts made only of modifiers: tap two together and let go (⌥⌘ captures, ⌃⌘ listens).
 ///
 /// Carbon hot keys need a letter key, so this listens to modifier changes with a listen-only
 /// event tap instead. That requires Input Monitoring permission. Catchy never sees what you
-/// type; only whether a key was pressed while ⌥⌘ was down, which cancels the tap.
+/// type; only whether a key was pressed while the pair was down, which cancels the tap. So
+/// ⌃⌘Q, ⌃⌘Space, ⌥⌘Esc and friends keep working.
 final class ModifierTapHotKey {
-    private let action: () -> Void
+    struct Shortcut {
+        let modifiers: CGEventFlags
+        let action: () -> Void
+    }
+
+    private let shortcuts: [Shortcut]
     /// Esc, seen even when Catchy isn't the active app (the capture overlay and dictation use it).
     var onEscape: () -> Void = {}
     private var tap: CFMachPort?
     private var retry: Timer?
 
-    private var armedAt: Date?
+    private var armed: (shortcut: Int, at: Date)?
     private var spoiled = false
+    private static let watched: CGEventFlags = [.maskCommand, .maskAlternate, .maskShift, .maskControl]
 
     /// Whether the shortcut is live (Input Monitoring granted and the tap installed).
     var onStatusChange: (Bool) -> Void = { _ in }
@@ -21,8 +28,8 @@ final class ModifierTapHotKey {
         didSet { if isActive != oldValue { onStatusChange(isActive) } }
     }
 
-    init(action: @escaping () -> Void) {
-        self.action = action
+    init(_ shortcuts: [Shortcut]) {
+        self.shortcuts = shortcuts
     }
 
     /// Installs the tap now if allowed; otherwise keeps checking, so granting access in
@@ -74,19 +81,27 @@ final class ModifierTapHotKey {
         case .tapDisabledByTimeout, .tapDisabledByUserInput:
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
         case .flagsChanged:
-            let held = flags.intersection([.maskCommand, .maskAlternate, .maskShift, .maskControl])
-            if held == [.maskCommand, .maskAlternate] {
-                if armedAt == nil { armedAt = .now; spoiled = false }
-            } else if held.isEmpty {
-                // Both let go: a quick, clean tap fires.
-                if let armedAt, !spoiled, Date.now.timeIntervalSince(armedAt) < 0.6 { action() }
-                armedAt = nil
-            } else if !held.isDisjoint(with: [.maskShift, .maskControl]) {
+            let held = flags.intersection(Self.watched)
+            if held.isEmpty {
+                // All let go: a quick, clean tap fires its shortcut.
+                if let armed, !spoiled, Date.now.timeIntervalSince(armed.at) < 0.6 {
+                    shortcuts[armed.shortcut].action()
+                }
+                armed = nil
+            } else if let index = shortcuts.firstIndex(where: { $0.modifiers == held }) {
+                if armed == nil {
+                    armed = (index, .now)
+                    spoiled = false
+                } else if armed?.shortcut != index {
+                    spoiled = true
+                }
+            } else if let armed, !held.isSubset(of: shortcuts[armed.shortcut].modifiers) {
+                // A third modifier joined in: some other shortcut.
                 spoiled = true
             }
         default:
-            // ⌥⌘ + any key or click is some other shortcut.
-            if armedAt != nil { spoiled = true }
+            // The pair plus any key or click is some other shortcut.
+            if armed != nil { spoiled = true }
         }
     }
 }

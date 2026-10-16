@@ -20,6 +20,7 @@ final class StatusItemController: NSObject {
 
         state.showIsland = { [weak self] in self?.show() }
         state.hideIsland = { [weak self] in self?.island.hide() }
+        state.islandIsOpen = { [weak self] in self?.island.isShown ?? false }
         island.onClose = { [weak self] in self?.islandDidClose() }
         observePhase()
     }

@@ -21,7 +21,8 @@ Nothing leaves your Mac. There's no account, no server and no cloud AI.
 | **Copy a picture**: a screenshot, or a photo of a poster copied on your iPhone | reads the text in it and opens the card |
 | **Tap ⌥⌘** (Option + Command together) and drag over part of the screen | reads that area and opens the card |
 | Select text, right-click › **Services › Catch with Catchy** | opens the card |
-| **Hover the notch** | opens a quick panel: Capture and Clipboard, or the card you left waiting |
+| **Tap ⌃⌘** (Control + Command) and just say it, however casually | turns what you said into a card; with a card open, it changes that card |
+| **Hover the notch** | opens a quick panel: Capture, Clipboard and Voice, or the card you left waiting |
 
 - **Understands messy text:** relative dates ("this saturday 7-10pm"), split dates and times ("Sat, Oct 24 • 4pm"), and titles written in all caps.
 - **Time zones:** "Thursday 3:00 pm ET" lands at the right local time, and the card notes the original time.
@@ -79,7 +80,8 @@ Catchy only asks for a permission when you first need it:
 | Calendars | First **Add to Calendar** | Save events; pick an iCloud calendar so they reach your iPhone |
 | Reminders | First **Add to Reminders** | Save tasks |
 | Screen Recording | First screen capture | Read the area you select. macOS applies this only after a relaunch, so Catchy shows a **Reopen Catchy** button |
-| Input Monitoring | **Turn On** in the island | Notice the ⌥⌘ tap (a shortcut with no letter key needs it). Catchy never records what you type |
+| Input Monitoring | **Turn On** in the island | Notice the ⌥⌘ and ⌃⌘ taps (shortcuts with no letter key need it). Catchy never records what you type |
+| Microphone | First voice catch | Hear you, only while the island says "Listening…". Transcribed on the Mac |
 
 If one is denied, the card says so and links to the right pane in System Settings.
 

@@ -69,6 +69,8 @@ final class AppState {
 
     /// Wired up by the status item controller.
     var showIsland: () -> Void = {}
+    /// Whether the island is open as the full card (set by the status item controller).
+    var islandIsOpen: () -> Bool = { false }
     var hideIsland: () -> Void = {}
 
     private var work: Task<Void, Never>?
@@ -109,7 +111,10 @@ final class AppState {
         if regionSelector.isSelecting {
             regionSelector.cancel()
         } else if phase == .listening {
+            let wasNewCatch = listeningPurpose == .newCatch
             cancelListening()
+            // A new dictation cancelled from the keyboard: put the island away too.
+            if wasNewCatch { hideIsland() }
         }
     }
 
@@ -154,6 +159,17 @@ final class AppState {
                 voice.cancel()
                 phase = .failed(error.localizedDescription)
             }
+        }
+    }
+
+    /// The ⌃⌘ tap: start listening, or finish if already listening. With a card open, what you
+    /// say changes that card; otherwise it's a new catch.
+    func toggleListening() {
+        if phase == .listening {
+            finishListening()
+        } else {
+            let editing = phase == .review && !showsList && islandIsOpen()
+            startListening(for: editing ? .edit : .newCatch)
         }
     }
 

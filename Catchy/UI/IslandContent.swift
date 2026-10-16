@@ -73,7 +73,7 @@ private struct IdleView: View {
                 Button {
                     state.captureScreen()
                 } label: {
-                    Label(state.shortcutIsActive ? "Capture  ⌥⌘" : "Capture", systemImage: "viewfinder")
+                    ShortcutLabel(title: "Capture", symbol: "viewfinder", keys: state.shortcutIsActive ? "⌥⌘" : nil)
                 }
                 .buttonStyle(.islandProminent)
                 Button {
@@ -85,10 +85,10 @@ private struct IdleView: View {
                 Button {
                     state.startListening()
                 } label: {
-                    Image(systemName: "mic.fill")
+                    ShortcutLabel(title: nil, symbol: "mic.fill", keys: state.shortcutIsActive ? "⌃⌘" : nil)
                 }
                 .buttonStyle(.island)
-                .help("Say it: \"lunch with Sam tomorrow at one\"")
+                .help("Say it: \"lunch with Sam tomorrow at one\" (or tap ⌃⌘)")
                 Spacer(minLength: 0)
             }
 
@@ -99,6 +99,27 @@ private struct IdleView: View {
     }
 }
 
+/// Icon, title and a quiet shortcut hint, always on one line.
+private struct ShortcutLabel: View {
+    let title: String?
+    let symbol: String
+    let keys: String?
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+            if let title { Text(title) }
+            if let keys {
+                Text(keys)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .opacity(0.55)
+            }
+        }
+        .lineLimit(1)
+        .fixedSize()
+    }
+}
+
 private struct WelcomeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
@@ -106,6 +127,7 @@ private struct WelcomeView: View {
                 .font(.system(size: 14, weight: .semibold))
             step("doc.on.clipboard", "Copy anything with a date, here or on iPhone")
             step("command", "Tap ⌥⌘ and drag over a flyer")
+            step("mic.fill", "Tap ⌃⌘ and just say it")
             step("contextualmenu.and.cursorarrow", "Right-click › Services › Catch with Catchy")
             step("lock", "Read on this Mac by Apple's on-device model")
         }
