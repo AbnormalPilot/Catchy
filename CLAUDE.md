@@ -181,3 +181,6 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   apps keep their Esc). Test: post flagsChanged ⌘ then ⌘⌥ then none, screenshot, post Esc, screenshot.
 - Voice edits: `DateHints` adds a stand-in start (empty phrase) for a bare length; ignore it when editing,
   or "for 2 hours" moves the event instead of lengthening it. Tests in `CatchyTests/VoiceEditTests.swift`.
+- Devpost thumbnail: `devpost/thumbnail.png` (3000×2000, 3:2, under 5 MB), drawn by
+  `swift Tools/make-thumbnail.swift devpost/thumbnail.png`. No tagline on it: promotional copy is the
+  learner's to write (Skill Pack rule); add theirs if they give one.
