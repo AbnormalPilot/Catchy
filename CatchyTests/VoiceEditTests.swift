@@ -66,3 +66,47 @@ struct VoiceEditing {
         #expect(VoiceEdit.summary(edit.changed) == "Changed title and time")
     }
 }
+
+@Suite("Voice edits read the hour in context")
+struct VoiceEditHours {
+    private func card(at hour: Int, title: String = "Classes") -> EventDraft {
+        let start = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 16, hour: hour))!
+        return EventDraft(title: title, start: start, end: start.addingTimeInterval(3600),
+                          isAllDay: false, location: "", notes: "", url: nil)
+    }
+
+    private func hour(_ date: Date) -> Int { Calendar.current.component(.hour, from: date) }
+
+    @Test func bareHourNearTheEveningCardIsEvening() {
+        // The bug: "make it at 10" on a 21:00 card became the title.
+        let edit = VoiceEdit.apply("make it at 10", to: card(at: 21))
+        #expect(edit.draft.title == "Classes")
+        #expect(hour(edit.draft.start) == 22)
+        #expect(hour(edit.draft.end) == 23)
+    }
+
+    @Test func bareHourNearTheMorningCardIsMorning() {
+        #expect(hour(VoiceEdit.apply("make it at 10", to: card(at: 9)).draft.start) == 10)
+    }
+
+    @Test(arguments: ["make it 10", "change it to 10", "move it to 10", "at 10"])
+    func phrasings(said: String) {
+        let edit = VoiceEdit.apply(said, to: card(at: 21))
+        #expect(hour(edit.draft.start) == 22)
+        #expect(edit.draft.title == "Classes")
+    }
+
+    @Test func explicitMeridiemWins() {
+        #expect(hour(VoiceEdit.apply("make it 10 am", to: card(at: 21)).draft.start) == 10)
+    }
+
+    @Test func eveningGuessForSeven() {
+        #expect(hour(VoiceEdit.apply("change it to 7", to: card(at: 18)).draft.start) == 19)
+    }
+
+    @Test func commandsNeverBecomeTitles() {
+        let edit = VoiceEdit.apply("make it better somehow", to: card(at: 21))
+        #expect(edit.draft.title == "Classes")
+        #expect(edit.changed.isEmpty)
+    }
+}

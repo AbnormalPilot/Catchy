@@ -188,3 +188,7 @@ contradicts) in the same commit as the change. Prune entries that stop being tru
   ⌃⌘ → voice (toggle; with a card open it's a voice edit). A third modifier, any key or a click while held
   spoils the tap, so ⌃⌘Q / ⌃⌘Space still work. Test by posting flagsChanged events (see the esc test).
   When testing hover/Esc, park the pointer away from the notch first or hover will reopen the island.
+- Voice edits must work out *what* to change from meaning (user: "it should be intelligent enough to get the
+  context"). Apple's detector skips a bare "at 10", so `VoiceEdit.clockTime` reads clock times itself; with no
+  am/pm it takes the reading nearest the card's current time (21:00 card + "at 10" → 22:00). Commands
+  ("make it…", "move…", "at…") or anything with digits never become a title; unknown → no change.

@@ -155,6 +155,10 @@ final class EventExtractor {
             notes: \(draft.notes)
 
             Spoken change: "\(instruction)"
+            Work out which field the change is about from its meaning: "make it at 10" or "push it an hour" is the
+            time, "move it to Friday" the day, "at Starbucks" the place, "call it …" the title. Never put the
+            spoken command into the title.
+            An hour without am/pm means the reading closest to the current start time ("10" for a 21:00 event is 22:00).
             Return the whole \(kind) with only that change applied; keep everything else exactly the same.
             Times are local; leave timeZone empty.
             """
